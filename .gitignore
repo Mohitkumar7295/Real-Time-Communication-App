@@ -1,0 +1,29 @@
+# Build & Dependencies
+target/
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# Runtime & Local storage
+uploads/
+*.log
+
+# Environment & Credentials
+.env
+*.pem
+*.key
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS generated files
+.DS_Store
+Thumbs.db

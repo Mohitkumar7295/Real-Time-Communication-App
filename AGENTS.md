@@ -14,50 +14,42 @@ MeetApp is a real-time video conferencing and collaboration web application prov
 - **Whiteboard:** HTML5 Canvas synchronized over WebSocket
 - **File Storage:** Local disk directory with file metadata tracked in the database
 
-## 3. Folder Structure
-All application code must follow this exact layout:
+## 3. Project Map & Folder Structure
+
+Detailed map with every file and responsibility: see docs/ARCHITECTURE.md section 4
+Use exactly this structure. Do not create packages or folders outside it without asking.
 
 ```
-MeetApp/
-├── pom.xml
-├── AGENTS.md
-├── docs/
-│   ├── PRD.md
-│   ├── ARCHITECTURE.md
-│   ├── API.md
-│   ├── DATABASE.md
-│   ├── SECURITY.md
-│   └── TASKS.md
+meetapp/
+├── pom.xml, Dockerfile, docker-compose.yml, .env.example, .gitignore, README.md, AGENTS.md
+├── docs/ (PRD.md, ARCHITECTURE.md, DATABASE.md, API.md, SECURITY.md, TASKS.md)
 └── src/
     ├── main/
-    │   ├── java/com/example/meetapp/
-    │   │   ├── config/          # Security, WebSocket, WebMvc, App configurations
-    │   │   ├── controller/      # REST API endpoints (Auth, Room, File, etc.)
-    │   │   ├── dto/             # Request/Response Data Transfer Objects
-    │   │   ├── exception/       # Custom exceptions & global exception handler
-    │   │   ├── model/           # JPA entities (User, Room, FileMetadata, etc.)
-    │   │   ├── repository/      # Spring Data JPA repositories
-    │   │   ├── security/        # JWT filters, UserDetailsService, Auth tokens
-    │   │   ├── service/         # Business logic interfaces and implementations
-    │   │   └── websocket/       # WebSocket handlers, interceptors, signaling models
+    │   ├── java/com/codealpha/meetapp/
+    │   │   ├── MeetAppApplication.java
+    │   │   ├── common/ (config/, exception/, util/)
+    │   │   ├── security/
+    │   │   ├── auth/ (dto/)
+    │   │   ├── user/ (dto/)
+    │   │   ├── room/ (dto/)
+    │   │   ├── signaling/ (message/, handler/)
+    │   │   ├── webrtc/ (dto/)
+    │   │   ├── whiteboard/
+    │   │   ├── chat/ (dto/)
+    │   │   ├── file/ (storage/, dto/)
+    │   │   └── crypto/
     │   └── resources/
-    │       ├── application.properties
-    │       └── static/          # Static frontend client
-    │           ├── index.html
-    │           ├── css/
-    │           │   ├── style.css
-    │           │   └── responsive.css
-    │           └── js/
-    │               ├── config.js
-    │               ├── auth.js
-    │               ├── room.js
-    │               ├── webrtc.js
-    │               ├── whiteboard.js
-    │               ├── chat.js
-    │               └── files.js
-    └── test/
-        └── java/com/example/meetapp/
+    │       ├── application.yml, application-dev.yml, application-prod.yml
+    │       ├── db/migration/ (V1__users.sql .. V5__messages.sql)
+    │       └── static/
+    │           ├── index.html, login.html, signup.html, dashboard.html, prejoin.html, room.html, ended.html
+    │           ├── css/ (base.css, auth.css, room.css)
+    │           └── js/ (config.js, api.js, auth.js, dashboard.js, socket.js, webrtc.js, room.js, screenshare.js, chat.js, files.js, whiteboard.js)
+    └── test/java/com/codealpha/meetapp/ (mirrors main feature packages)
 ```
+
+### Database Hosting
+InsForge hosts PostgreSQL only; no InsForge Auth, edge functions or auto APIs; Flyway owns the schema (`ddl-auto=validate`); env vars only (`DB_URL`, `DB_USER`, `DB_PASSWORD`); `sslmode=require`. No table may be publicly exposed through InsForge auto APIs without row-level security. Fallback: self-hosted PostgreSQL or another Postgres host.
 
 ## 4. Read-First Rule
 - Always inspect and read `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/SECURITY.md`, and `docs/TASKS.md` before starting any task.

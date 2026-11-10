@@ -27,3 +27,5 @@ app:
   upload-dir: target/test-uploads
   otp-expiry-minutes: 5
   stun-urls: stun:stun.l.google.com:19302
+  jwt-secret: test-dummy-jwt-secret-minimum-32-chars-long-abcdef
+  jwt-expiry-minutes: 1440

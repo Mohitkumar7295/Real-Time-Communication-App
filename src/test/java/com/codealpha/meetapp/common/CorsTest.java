@@ -31,7 +31,7 @@ class CorsTest {
 
         this.mockMvc = MockMvcBuilders
                 .standaloneSetup(new PingController())
-                .addFilters(corsConfig.corsFilter())
+                .addFilters(new org.springframework.web.filter.CorsFilter(corsConfig.corsConfigurationSource()))
                 .build();
     }
 

@@ -38,3 +38,5 @@ app:
   turn-url: ${TURN_URL:}
   turn-username: ${TURN_USERNAME:}
   turn-credential: ${TURN_CREDENTIAL:}
+  jwt-secret: ${JWT_SECRET:test-dummy-jwt-secret-minimum-32-chars-long-abcdef}
+  jwt-expiry-minutes: ${JWT_EXPIRY_MINUTES:1440}

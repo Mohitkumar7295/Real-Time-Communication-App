@@ -46,6 +46,11 @@ public class AppProperties {
     private String turnUsername;
     private String turnCredential;
 
+    private String jwtSecret = "test-dummy-jwt-secret-minimum-32-chars-long-abcdef";
+
+    @Positive(message = "app.jwt-expiry-minutes must be positive")
+    private int jwtExpiryMinutes = 1440;
+
     @PostConstruct
     public void validateOrigin() {
         if (allowedOrigin == null || allowedOrigin.isBlank()) {
@@ -149,6 +154,22 @@ public class AppProperties {
         this.turnCredential = turnCredential;
     }
 
+    public String getJwtSecret() {
+        return jwtSecret;
+    }
+
+    public void setJwtSecret(String jwtSecret) {
+        this.jwtSecret = jwtSecret;
+    }
+
+    public int getJwtExpiryMinutes() {
+        return jwtExpiryMinutes;
+    }
+
+    public void setJwtExpiryMinutes(int jwtExpiryMinutes) {
+        this.jwtExpiryMinutes = jwtExpiryMinutes;
+    }
+
     @Override
     public String toString() {
         return "AppProperties{" +
@@ -161,6 +182,8 @@ public class AppProperties {
                 ", turnUrl='" + turnUrl + '\'' +
                 ", turnUsername='" + turnUsername + '\'' +
                 ", turnCredential=" + (turnCredential != null && !turnCredential.isBlank() ? "'****'" : "null") +
+                ", jwtSecret=" + (jwtSecret != null && !jwtSecret.isBlank() ? "'****'" : "null") +
+                ", jwtExpiryMinutes=" + jwtExpiryMinutes +
                 '}';
     }
 }

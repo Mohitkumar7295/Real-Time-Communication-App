@@ -13,12 +13,12 @@
 | 0 Setup | 1 | 0 | 8 Screen | 1 | 0 |
 | 1 Base | 1 | 1 | 9 Chat | 1 | 0 |
 | 2 DB | 1 | 0 | 10 Files | 1 | 0 |
-| 3 Auth | 3 | 0 | 11 Board | 1 | 0 |
+| 3 Auth | 3 | 1 | 11 Board | 1 | 0 |
 | 4 Rooms | 1 | 0 | 12 Sec | 1 | 0 |
 | 5 Front | 1 | 0 | 13 UX | 1 | 0 |
 | 6 Signal | 1 | 0 | 14 Deploy | 1 | 0 |
 | 7 Video | 1 | 0 | 15 Submit | 1 | 0 |
-| **Tot** | **18** | **1** | | | |
+| **Tot** | **18** | **2** | | | |
 
 ## Dependencies & DoD
 - **Dependencies:** 1-2 need 0; 3 needs 1-2; 4 needs 3; 5 needs 3-4; 6 needs 4; 7 needs 4,6; 8-11 need 6-7; 12-15 need 0-11.
@@ -62,7 +62,7 @@
   - Steps: Create Flyway migrations V1 to V7; create JPA entities and Spring Data repositories.
   - Done when: Migrations apply cleanly and validation succeeds. Test: Start app against PostgreSQL; verify all 6 tables exist.
 
-- [ ] **T-3.1 Auth: JWT & Security Chain** (FR-3, FR-25)
+- [x] **T-3.1 Auth: JWT & Security Chain** (FR-3, FR-25)
   - Files: `SecurityConfig.java`, `JwtService.java`, `JwtAuthFilter.java`
   - Steps: Implement JwtService for HS256, CustomUserDetailsService, JwtAuthFilter, and stateless SecurityConfig.
   - Done when: Protected endpoint rejects unauthenticated calls with 401. Test: `mvn test -Dtest=AuthServiceTest`.
@@ -129,7 +129,7 @@
 
 - [ ] **T-14.1 Deploy: Docker Packaging & Cloud Config** (NFR-2, NFR-4)
   - Files: `Dockerfile`, `docker-compose.yml`, `README.md`, `application-prod.yml`
-  - Steps: Build multi-stage Dockerfile; verify full stack locally; document env injection.
+  - Steps: Build multi-stage Dockerfile; verify full stack locally; document env injection; configure host forwarded headers (`server.forwarded-header-strategy=framework`) for reverse-proxy client IP resolution.
   - Done when: Application container builds and starts with prod profile. Test: `docker compose up --build` and verify /actuator/health is UP.
 
 - [ ] **T-15.1 Submit: Docs, Demo Verification & Review** (FR-1..26)

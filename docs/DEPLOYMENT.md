@@ -153,3 +153,4 @@ View container logs in the cloud dashboard under the **Logs** tab.
 - [ ] Detailed stack traces suppressed in error responses.
 - [ ] CORS restricted strictly to public frontend origin.
 - [ ] Strong random 256-bit JWT secret configured.
+- [ ] Forwarded Headers & Reverse Proxy: Configure host forwarded headers (`server.forwarded-header-strategy=framework`) so IP-based rate limiting accurately resolves the client IP behind reverse proxies without trusting unverified client `X-Forwarded-For` headers.

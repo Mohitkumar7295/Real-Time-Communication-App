@@ -91,6 +91,7 @@ graph TD
 | **Backend Runtime** | Java 17 | Core programming language running on modern LTS runtime. |
 | **Framework** | Spring Boot 3.x | Enterprise application container, dependency injection, and auto-configuration. |
 | **Web & REST** | Spring Web (MVC) | RESTful API endpoints for authentication, room lifecycle, and file transfer. |
+| **Email & 2FA** | Spring Boot Starter Mail | Dispatches 6-digit OTP verification emails via SMTP. |
 | **Signaling** | Spring WebSocket | Plain WebSocket handler (`TextWebSocketHandler`) exchanging JSON envelopes. |
 | **Security & Auth** | Spring Security 6 & JJWT | Stateless authentication, BCrypt password hashing, and JWT authorization filter. |
 | **Data Persistence** | Spring Data JPA & Hibernate | Object-Relational Mapping (ORM) connecting via standard PostgreSQL JDBC. |
@@ -149,12 +150,23 @@ meetapp/
     │   │   │   ├── CustomUserDetailsService.java # Bridges Spring Data User entity to Spring Security UserDetails
     │   │   │   └── RateLimitFilter.java        # Optional token bucket filter protecting auth and file upload endpoints
     │   │   ├── auth/                           # User registration, login, and token issuance (FR-1..4)
-    │   │   │   ├── AuthController.java         # REST endpoints for /api/auth/register and /api/auth/login
-    │   │   │   ├── AuthService.java            # Business logic for credential validation, password hashing, and token issue
+    │   │   │   ├── AuthController.java         # REST endpoints for /register, /login, /verify-otp, /resend-otp
+    │   │   │   ├── AuthService.java            # Business logic for credentials, OTP validation, and token issue
     │   │   │   └── dto/
     │   │   │       ├── RegisterRequest.java    # Registration payload with Bean Validation annotations (FR-1, FR-2)
-    │   │   │       ├── LoginRequest.java       # Login payload with email and password constraints
+    │   │   │       ├── LoginRequest.java       # Login credentials payload (FR-3)
+    │   │   │       ├── LoginInitResponse.java  # Step 1 response: {otpRequired, challengeId, maskedEmail, expiresInSeconds}
+    │   │   │       ├── VerifyOtpRequest.java   # Step 2 verification payload: {challengeId, otp}
+    │   │   │       ├── ResendOtpRequest.java   # Resend OTP payload: {challengeId}
     │   │   │       └── AuthResponse.java       # Authentication response holding JWT token and user summary
+    │   │   ├── otp/                            # Two-step email OTP challenges and lifecycle
+    │   │   │   ├── OtpChallenge.java           # JPA entity mapping otp_challenges table
+    │   │   │   ├── OtpChallengeRepository.java # Repository for challenge lookup by ID and user
+    │   │   │   ├── OtpService.java             # Challenge generation, hashing, attempt tracking, and validation
+    │   │   │   └── OtpGenerator.java           # Cryptographically secure 6-digit random generator (SecureRandom)
+    │   │   ├── email/                          # Email notifications and OTP delivery
+    │   │   │   ├── EmailService.java           # Interface defining sendOtpEmail()
+    │   │   │   └── SmtpEmailService.java       # JavaMailSender implementation with dev-profile console logging
     │   │   ├── user/                           # User entity and profile management
     │   │   │   ├── User.java                   # JPA entity mapping the users table (id, email, password_hash, full_name)
     │   │   │   ├── UserRepository.java         # Spring Data repository for user lookups by email
@@ -224,7 +236,9 @@ meetapp/
     │       │   ├── V2__rooms.sql               # Creates rooms table and room_code unique index
     │       │   ├── V3__room_participants.sql   # Creates room_participants junction table
     │       │   ├── V4__files.sql               # Creates files metadata table with foreign keys
-    │       │   └── V5__messages.sql            # Creates messages table with room and user foreign keys
+    │       │   ├── V5__messages.sql            # Creates messages table with room and user foreign keys
+    │       │   ├── V6__indexes.sql             # Creates performance indexes
+    │       │   └── V7__otp_challenges.sql      # Creates otp_challenges table and index
     │       └── static/                         # Frontend client files (HTML5, CSS3, modular JavaScript)
     │           ├── index.html                  # Landing page introducing MeetApp features and navigation
     │           ├── login.html                  # User login page with email/password form
@@ -272,7 +286,9 @@ meetapp/
 | :--- | :--- | :--- | :--- | :--- |
 | `common` | `GlobalExceptionHandler`, `CorsConfig` | Catches exceptions and maps to uniform `ApiError`; sets CORS headers. | None | Spring MVC, Jackson |
 | `security` | `JwtService`, `JwtAuthFilter` | Generates/validates JWTs; filters HTTP requests; checks WS handshake. | `CustomUserDetailsService` | JJWT, Spring Security |
-| `auth` | `AuthController`, `AuthService` | User registration, login verification, password hashing, token issuance. | `UserService`, `JwtService` | Spring Web, BCrypt |
+| `auth` | `AuthController`, `AuthService` | User registration, credential check, OTP challenge initiation, token issuance. | `UserService`, `OtpService`, `JwtService` | Spring Web, BCrypt |
+| `otp` | `OtpService`, `OtpGenerator`, `OtpChallengeRepository` | SecureRandom 6-digit OTP generation, SHA-256 hashing at rest, expiry/attempt validation. | `EmailService` | Spring Data JPA, SecureRandom |
+| `email` | `EmailService`, `SmtpEmailService` | Asynchronous SMTP delivery of OTP verification emails; console logging in dev profile. | None | Spring Boot Mail, JavaMail |
 | `user` | `UserService`, `UserRepository` | Retrieves user profile data and persists user accounts. | None | Spring Data JPA |
 | `room` | `RoomService`, `RoomRepository` | Creates rooms, generates codes, validates max 5 capacity, ends meetings. | `UserService` | Spring Data JPA |
 | `signaling`| `SignalingWebSocketHandler`, `RoomSessionRegistry` | Authenticates WebSocket sessions, tracks in-memory peer map, dispatches messages. | `RoomService`, `WhiteboardService`, `ChatService` | Spring WebSocket |
@@ -403,7 +419,7 @@ All messages exchanged over the WebSocket connection conform to the following JS
 
 ## 10. Key Flows (Mermaid Sequence Diagrams)
 
-### 10.1 User Registration and Login
+### 10.1 User Registration and Two-Step Login (with Email OTP)
 ```mermaid
 sequenceDiagram
     autonumber
@@ -411,6 +427,8 @@ sequenceDiagram
     participant Browser
     participant AuthController
     participant AuthService
+    participant OtpService
+    participant EmailService
     participant PostgresDB
 
     User->>Browser: Enters name, email, password
@@ -422,16 +440,36 @@ sequenceDiagram
     AuthService-->>AuthController: User created
     AuthController-->>Browser: HTTP 201 Created
 
+    Note over User, Browser: Step 1: Credential Verification & OTP Challenge
     User->>Browser: Enters email and password
     Browser->>AuthController: POST /api/auth/login
     AuthController->>AuthService: login(credentials)
     AuthService->>PostgresDB: Find User by email
     PostgresDB-->>AuthService: User entity with hash
-    AuthService->>AuthService: Verify BCrypt match & generate JWT
+    AuthService->>AuthService: Verify BCrypt match
+    AuthService->>OtpService: createChallenge(user)
+    OtpService->>OtpService: Generate 6-digit OTP (SecureRandom) & SHA-256 hash
+    OtpService->>PostgresDB: Save otp_challenges (challengeId, hash, expires_at)
+    OtpService->>EmailService: sendOtpEmail(email, otp)
+    Note over EmailService: In dev mode, OTP is logged to console; in prod, dispatched via SMTP
+    AuthService-->>AuthController: LoginInitResponse (otpRequired, challengeId, maskedEmail, expiresInSeconds)
+    AuthController-->>Browser: HTTP 200 OK (Prompt user for OTP)
+
+    Note over User, Browser: Step 2: OTP Verification & JWT Issuance
+    User->>Browser: Enters 6-digit OTP received via email
+    Browser->>AuthController: POST /api/auth/verify-otp (challengeId, otp)
+    AuthController->>AuthService: verifyOtp(challengeId, otp)
+    AuthService->>OtpService: validateAndConsume(challengeId, otp)
+    OtpService->>PostgresDB: Find challenge & check attempts/expiry
+    OtpService->>OtpService: Constant-time hash match (MessageDigest.isEqual)
+    OtpService->>PostgresDB: Mark consumed = TRUE
+    AuthService->>AuthService: Generate JWT (24h expiry)
     AuthService-->>AuthController: AuthResponse (JWT + User summary)
     AuthController-->>Browser: HTTP 200 OK + JWT
     Browser->>Browser: Store JWT in localStorage
 ```
+
+> **Development Mode Note:** When running under the `dev` Spring profile (`application-dev.yml`), the generated 6-digit OTP is output directly to the application logs via SLF4J, allowing full local development and testing without requiring live SMTP credentials. In `prod`, logging raw OTP codes is strictly forbidden.
 
 ### 10.2 Create and Join Room with WebSocket Handshake
 ```mermaid
@@ -674,8 +712,14 @@ All sensitive values and environment-dependent properties are externalized via e
 | `TURN_USERNAME` | No | TURN server authentication username. |
 | `TURN_CREDENTIAL` | No | TURN server authentication password/credential. |
 | `AES_KEY` | No | Optional 256-bit base64 key for client/server payload encryption. |
+| `MAIL_HOST` | Yes (prod) | SMTP server host (e.g., `smtp.gmail.com` or `smtp.sendgrid.net`). |
+| `MAIL_PORT` | Yes (prod) | SMTP server port (default: `587`). |
+| `MAIL_USERNAME` | Yes (prod) | SMTP authentication username / account. |
+| `MAIL_PASSWORD` | Yes (prod) | SMTP authentication password or App Password. |
+| `MAIL_FROM` | Yes (prod) | Sender address for outgoing OTP emails (e.g., `no-reply@meetapp.com`). |
+| `OTP_EXPIRY_MINUTES`| No | Validity window for OTP challenges (default: `5` minutes). |
 
-- **Profiles:** `application-dev.yml` enables verbose logging and relaxed CORS for local development with Docker Compose. `application-prod.yml` enforces strict SSL and production property constraints.
+- **Profiles:** `application-dev.yml` enables verbose logging and relaxed CORS for local development with Docker Compose. In the `dev` profile, generated 6-digit OTP codes are logged to console output via SLF4J to allow testing without an SMTP server (never permitted in `prod`). `application-prod.yml` enforces strict SSL and production property constraints.
 - **Template:** A `.env.example` file is maintained in the repository root documenting all variable names without values.
 
 ---

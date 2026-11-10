@@ -30,6 +30,8 @@ meetapp/
     │   │   ├── common/ (config/, exception/, util/)
     │   │   ├── security/
     │   │   ├── auth/ (dto/)
+    │   │   ├── otp/ (dto/)
+    │   │   ├── email/
     │   │   ├── user/ (dto/)
     │   │   ├── room/ (dto/)
     │   │   ├── signaling/ (message/, handler/)
@@ -40,7 +42,7 @@ meetapp/
     │   │   └── crypto/
     │   └── resources/
     │       ├── application.yml, application-dev.yml, application-prod.yml
-    │       ├── db/migration/ (V1__users.sql .. V5__messages.sql)
+    │       ├── db/migration/ (V1__users.sql .. V7__create_otp_challenges.sql)
     │       └── static/
     │           ├── index.html, login.html, signup.html, dashboard.html, prejoin.html, room.html, ended.html
     │           ├── css/ (base.css, auth.css, room.css)

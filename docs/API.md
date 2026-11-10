@@ -2,30 +2,25 @@
 
 ## 1. Conventions
 - **Base Paths:** REST: `/api`, WebSocket: `/ws`.
-- **Payloads:** JSON (except multipart). Naming: `camelCase`. IDs: `Long` (`BIGINT`).
+- **Payloads:** JSON (multipart for uploads). Naming: `camelCase`. IDs: `Long` (`BIGINT`).
 - **Dates:** ISO-8601 UTC (`YYYY-MM-DDTHH:mm:ssZ`).
 - **Auth Header:** `Authorization: Bearer <JWT>`.
 
----
-
 ## 2. Standard Error Format
-All REST errors return this uniform JSON body:
 ```json
-{"timestamp":"2026-11-09T05:30:00Z","status":400,"error":"Bad Request","message":"Invalid input","path":"/api/path","fieldErrors":[{"field":"email","message":"Malformed"}]}
+{"timestamp":"2026-11-09T05:30:00Z","status":400,"error":"Bad Request","message":"Invalid input","path":"/api/path"}
 ```
 | Status | Name | Condition |
 | :--- | :--- | :--- |
 | `400` | Bad Request | Validation failure (malformed email, password <8 chars) |
-| `401` | Unauthorized | Missing, invalid, or expired JWT |
-| `403` | Forbidden | User is not a member or host of the room |
+| `401` | Unauthorized | Missing/invalid JWT or bad credentials / bad OTP |
+| `403` | Forbidden | Not room host or member |
 | `404` | Not Found | Room code, user, or file ID does not exist |
-| `409` | Conflict | Duplicate email or room capacity full (>5) |
+| `409` | Conflict | Duplicate email or room full (>5) |
 | `413` | Payload Too Large | File upload exceeds 10 MB limit |
 | `415` | Unsupported Media | Blocked file type (`.exe`, `.bat`, etc.) |
-| `429` | Too Many Requests | Rate limit exceeded |
+| `429` | Too Many Requests | Rate limit exceeded / challenge locked |
 | `500` | Server Error | Unhandled server error |
-
----
 
 ## 3. REST Endpoints
 
@@ -38,18 +33,29 @@ All REST errors return this uniform JSON body:
 ### 3.2 `POST /api/auth/login` (FR-3)
 - **Auth:** Anonymous.
 - **Request:** `{"email": "a@ex.com", "password": "Password1!"}`.
+- **Success:** `200 OK` $\to$ `{"otpRequired": true, "challengeId": "ch_123abc", "maskedEmail": "a***@ex.com", "expiresInSeconds": 300}`.
+- **Errors:** `401` (generic "Invalid email or password" to prevent user enumeration).
+- **Notes:** Generates 6-digit OTP and emails user. In dev profile, OTP is logged to console.
+
+### 3.2A `POST /api/auth/verify-otp` (FR-3A)
+- **Auth:** Anonymous.
+- **Request:** `{"challengeId": "ch_123abc", "otp": "123456"}` (6 numeric digits).
 - **Success:** `200 OK` $\to$ `{"token": "fake.jwt.token", "user": {"id": 1, "name": "Aarav", "email": "a@ex.com"}}`.
-- **Errors:** `401` (bad credentials).
+- **Errors:** `400` (invalid format), `401` (invalid/expired OTP), `429` (locked after 5 failed attempts).
+
+### 3.2B `POST /api/auth/resend-otp` (FR-3B)
+- **Auth:** Anonymous.
+- **Request:** `{"challengeId": "ch_123abc"}`.
+- **Success:** `200 OK` $\to$ `{"message": "OTP resent successfully", "expiresInSeconds": 300}`.
+- **Errors:** `400` (invalid challenge), `429` (cooldown active: 60s minimum wait, or max 3 resends).
 
 ### 3.3 `GET /api/users/me` (FR-1)
 - **Auth:** Authenticated User.
-- **Success:** `200 OK` $\to$ `{"id": 1, "name": "Aarav", "email": "a@ex.com"}`.
-- **Errors:** `401`.
+- **Success:** `200 OK` $\to$ `{"id": 1, "name": "Aarav", "email": "a@ex.com"}`. Errors: `401`.
 
 ### 3.4 `POST /api/rooms` (FR-4)
 - **Auth:** Authenticated User.
 - **Success:** `201 Created` $\to$ `{"roomCode": "ABC-DEF", "hostId": 1, "isActive": true, "createdAt": "2026-11-09T05:30:00Z"}`.
-- **Notes:** Generates random unique 6+ char code; creator becomes host.
 
 ### 3.5 `GET /api/rooms/{code}` (FR-5, FR-7)
 - **Auth:** Authenticated User.
@@ -58,8 +64,7 @@ All REST errors return this uniform JSON body:
 
 ### 3.6 `POST /api/rooms/{code}/end` (FR-6)
 - **Auth:** Room Host.
-- **Success:** `200 OK` $\to$ `{"message": "Room ABC-DEF ended"}`.
-- **Errors:** `403` (not host), `404`. Side effect: Closes room WebSockets.
+- **Success:** `200 OK` $\to$ `{"message": "Room ABC-DEF ended"}`. Errors: `403` (not host), `404`.
 
 ### 3.7 `GET /api/rooms/{code}/participants` (FR-5)
 - **Auth:** Room Participant.
@@ -81,25 +86,20 @@ All REST errors return this uniform JSON body:
 
 ### 3.11 `GET /api/files/download/{id}` (FR-17)
 - **Auth:** Room Participant.
-- **Success:** `200 OK` binary stream with `Content-Disposition: attachment; filename="doc.pdf"`.
-- **Errors:** `403`, `404`.
+- **Success:** `200 OK` binary stream with `Content-Disposition: attachment; filename="doc.pdf"`. Errors: `403`, `404`.
 
 ### 3.12 `GET /api/webrtc/ice-config` (FR-24)
 - **Auth:** Authenticated User.
-- **Success:** `200 OK` $\to$ `{"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}, {"urls": ["turn:turn.meetapp.com:3478"], "username": "guest", "credential": "secretpassword"}]}`.
+- **Success:** `200 OK` $\to$ `{"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}, {"urls": ["turn:turn.meetapp.com:3478"], "username": "u", "credential": "p"}]}`.
 
 ### 3.13 `GET /actuator/health` (NFR-4)
 - **Auth:** Public.
 - **Success:** `200 OK` $\to$ `{"status": "UP"}`.
 
----
-
 ## 4. Authentication Details
 - **Token:** JJWT HMAC-SHA256. Claims: `sub` (userId), `email`, `iat`, `exp` (24h).
 - **Expiry:** Expired tokens return `401 Unauthorized`; client redirects to `/login.html`.
 - **Logout:** Client deletes token from `localStorage`. No server session.
-
----
 
 ## 5. WebSocket Lifecycle
 - **Endpoint:** `GET /ws?token=<JWT>&room=<code>`.
@@ -107,15 +107,11 @@ All REST errors return this uniform JSON body:
 - **Close Codes:** `1000` (Normal exit), `1008` (Policy Violation: full, duplicate tab, expired token).
 - **Reconnection:** Client retries up to 3 times with exponential backoff.
 
----
-
 ## 6. WebSocket Message Envelope
 ```json
 {"type": "chat", "roomCode": "ABC-DEF", "from": "1", "to": null, "payload": {}}
 ```
 *Rule:* Server overwrites `from` with authenticated session user ID; ignores client-supplied `from`.
-
----
 
 ## 7. WebSocket Message Catalog
 
@@ -128,42 +124,43 @@ All REST errors return this uniform JSON body:
 | `answer` | C $\to$ S $\to$ C | Peer (`to`) | `{"sdp": "v=0..."}` | WebRTC SDP answer |
 | `ice-candidate`| C $\to$ S $\to$ C | Peer (`to`) | `{"candidate": "..."}` | WebRTC ICE candidate |
 | `chat` | Bidirectional | Room | `{"text": "Hello!", "timestamp": "..."}` | Max 1000 chars |
-| `draw` | Bidirectional | Room | `{"tool":"pen","color":"#000","size":2,"prevX":10,"prevY":10,"x":12,"y":14}` | Max 500 points |
+| `draw` | Bidirectional | Room | `{"tool":"pen","color":"#000","size":2,"x":12,"y":14}` | Max 500 points |
 | `clear-board` | Bidirectional | Room | `{}` | Resets canvas |
 | `board-state` | S $\to$ C | Peer | `{"strokes": [...]}` | Late-joiner sync |
 | `screen-share-start` | C $\to$ S $\to$ C | Room | `{"userId": 1}` | Screen share start |
 | `screen-share-stop` | C $\to$ S $\to$ C | Room | `{"userId": 1}` | Screen share stop |
-| `file-shared` | S $\to$ C | Room | `{"fileId": 5, "name": "doc.pdf", "size": 2048}` | Post-upload broadcast |
+| `file-shared` | S $\to$ C | Room | `{"fileId": 5, "name": "doc.pdf", "size": 2048}` | Broadcast |
 | `mute-status` | Bidirectional | Room | `{"audioMuted": true, "videoMuted": false}` | Device toggles |
 | `room-ended` | S $\to$ C | Room | `{"message": "Host ended meeting"}` | Disconnects peers |
 | `error` | S $\to$ C | Peer | `{"code": "ROOM_FULL", "message": "Max 5"}` | Error notification |
 
 *Limit:* Max envelope size: 64 KB.
 
----
-
 ## 8. Protocol Sequence Examples
 
-### 8.1 Login & Join Room
+### 8.1 Two-Step Login & Join Room
 ```mermaid
 sequenceDiagram
     participant C as Client
     participant API as REST /api
     participant WS as WebSocket /ws
-    C->>API: POST /api/auth/login
-    API-->>C: 200 OK (JWT)
+    C->>API: POST /api/auth/login (email, password)
+    API-->>C: 200 OK (otpRequired, challengeId)
+    Note over API: Server sends 6-digit OTP via email
+    C->>API: POST /api/auth/verify-otp (challengeId, otp)
+    API-->>C: 200 OK (JWT token, user)
     C->>WS: Connect /ws?token=JWT&room=ABC-DEF
     WS-->>C: 101 Switching Protocols
     C->>WS: {"type": "join"}
     WS-->>C: {"type": "board-state", "payload": {...}}
 ```
 
-### 8.2 WebRTC Offer / Answer / ICE Exchange
+### 8.2 WebRTC Exchange
 ```mermaid
 sequenceDiagram
-    participant C1 as Client 1 (New)
-    participant WS as WebSocket Server
-    participant C2 as Client 2 (Peer)
+    participant C1 as Client 1
+    participant WS as WebSocket
+    participant C2 as Client 2
     C1->>WS: {"type":"offer","to":2,"payload":{"sdp":"..."}}
     WS->>C2: {"type":"offer","from":1,"payload":{"sdp":"..."}}
     C2->>WS: {"type":"answer","to":1,"payload":{"sdp":"..."}}
@@ -171,20 +168,6 @@ sequenceDiagram
     C1->>WS: {"type":"ice-candidate","to":2,"payload":{...}}
     WS->>C2: {"type":"ice-candidate","from":1,"payload":{...}}
 ```
-
-### 8.3 Whiteboard Draw & Late-Joiner Catch-Up
-```mermaid
-sequenceDiagram
-    participant C1 as User A
-    participant WS as Server
-    participant C2 as User B (Late Joiner)
-    C1->>WS: {"type":"draw","payload":{...}}
-    WS-->>C1: Echo / Buffer
-    C2->>WS: Connect & {"type":"join"}
-    WS->>C2: {"type":"board-state","payload":{"strokes":[...]}}
-```
-
----
 
 ## 9. Permissions Matrix
 | Action / Endpoint | Anonymous | User | Participant | Host |
@@ -198,54 +181,27 @@ sequenceDiagram
 | `WS /ws` (Join room) | No | Yes | Yes | Yes |
 | `WS screen-share-start` | No | No | Yes | Yes |
 
----
-
 ## 10. Rate Limiting & Abuse Protection
-- **Login:** 5 req/min per IP ($\to$ `429`).
+- **Login / Verify OTP:** 5 req/min per IP ($\to$ `429`).
 - **File Upload:** 2 uploads/min per user ($\to$ `429`).
 - **Chat:** 5 msg/sec per user (dropped if exceeded).
 - **Draw:** 60 events/sec per user.
 
----
+## 11. Versioning & Mapping
+- Version: **v1** under `/api`. Breaking changes bump to `/v2`.
+- **Contracts:** `auth.js` (`/register`, `/login`, `/verify-otp`, `/resend-otp`), `dashboard.js` (`/rooms`, `/me`), `socket.js` (`/ws`), `webrtc.js` (`ice-config`, `offer`, `answer`, `ice-candidate`), `room.js` (`/end`, `mute-status`, `room-ended`), `screenshare.js` (`screen-share-*`), `chat.js` (`/messages`, `chat`), `files.js` (`/files/*`, `file-shared`), `whiteboard.js` (`draw`, `clear-board`, `board-state`).
 
-## 11. Versioning & Compatibility
-- Version: **v1** under `/api`. Breaking changes increment to `/v2`.
-- Client modules (`api.js`, `socket.js`) must strictly conform to this spec.
+## 13. OpenAPI & Postman Verification
+- SpringDoc OpenAPI at `/swagger-ui.html` (`/v3/api-docs`).
+- **Checklist:**
+  1. `POST /api/auth/register` $\to$ 201 Created.
+  2. `POST /api/auth/login` $\to$ 200 OK (`challengeId`, `otpRequired: true`).
+  3. `POST /api/auth/verify-otp` with valid OTP $\to$ 200 OK with Bearer JWT.
+  4. `POST /api/rooms` with JWT $\to$ 201 Created (`roomCode`).
+  5. `POST /api/files/upload/{code}` with 1MB PDF $\to$ 201 Created; `.exe` $\to$ 415.
+  6. `GET /api/files/download/{id}` $\to$ 200 OK binary stream.
+  7. `POST /api/rooms/{code}/end` $\to$ 200 OK; next join $\to$ 409.
 
----
-
-## 12. Frontend Contract Mapping
-| Client Module | API / WebSocket Calls |
-| :--- | :--- |
-| `auth.js` | `POST /api/auth/register`, `POST /api/auth/login` |
-| `dashboard.js` | `POST /api/rooms`, `GET /api/rooms/{code}`, `GET /api/users/me` |
-| `socket.js` | `/ws?token=...`, connection, reconnection, heartbeat |
-| `webrtc.js` | `GET /api/webrtc/ice-config`, `offer`, `answer`, `ice-candidate` |
-| `room.js` | `POST /api/rooms/{code}/end`, `mute-status`, `room-ended` |
-| `screenshare.js`| `screen-share-start`, `screen-share-stop` |
-| `chat.js` | `GET /api/rooms/{code}/messages`, `chat` |
-| `files.js` | `POST /api/files/upload/{code}`, `GET /api/files/download/{id}`, `file-shared` |
-| `whiteboard.js` | `draw`, `clear-board`, `board-state` |
-
----
-
-## 13. OpenAPI / Swagger Documentation
-- SpringDoc OpenAPI generates docs at `/swagger-ui.html` and JSON spec at `/v3/api-docs`.
-- `docs/API.md` is the design authority.
-
----
-
-## 14. Postman Testing Checklist
-1. `POST /api/auth/register` $\to$ Returns 201 Created.
-2. `POST /api/auth/login` $\to$ Returns 200 OK with Bearer JWT.
-3. `POST /api/rooms` with JWT $\to$ Returns 201 Created with `roomCode`.
-4. `POST /api/files/upload/{code}` with 1MB PDF $\to$ Returns 201 Created.
-5. `GET /api/files/download/{id}` $\to$ Returns 200 OK binary stream.
-6. `POST /api/files/upload/{code}` with `.exe` $\to$ Returns 415 Unsupported Media.
-7. `POST /api/rooms/{code}/end` $\to$ Returns 200 OK; subsequent joins fail with 409.
-
----
-
-## 15. Open Questions
+## 14. Open Questions
 - *Token Refresh:* Introduce `POST /api/auth/refresh` in v2?
 - *File Expiry:* Should file download URLs expire after room termination?

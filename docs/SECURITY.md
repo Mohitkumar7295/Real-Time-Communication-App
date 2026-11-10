@@ -51,10 +51,23 @@ MeetApp enforces a mandatory two-step authentication flow before issuing a JWT:
    - **Logging & Dev Mode:** OTPs are never logged in production. In the `dev` profile only, the generated OTP is logged via SLF4J to enable local testing without SMTP.
 3. **JWT Issuance:** Only after successful OTP verification is a signed JWT returned. Signed with HMAC-SHA256 (`HS256`, 256-bit secret), valid for 24 hours.
 
+### 4.1 JWT Invalidation After Password Change & Account Deletion
+Because MeetApp uses stateless HMAC-SHA256 JWTs, tokens issued prior to a credential change remain cryptographically valid until their 24-hour natural expiration unless explicitly verified against a revocation anchor.
+
+**Architectural Options for Token Invalidation:**
+- **Option 1 (Accept Stateless 24h Expiry):** Accept standard stateless token expiration. Tokens expire naturally within 24 hours. Zero database queries during `JwtAuthFilter` execution, preserving high-performance stateless verification.
+- **Option 2 (Database Timestamp Revocation — Recommended):**
+  - Add a `password_changed_at TIMESTAMPTZ` column to the `users` table via Flyway migration `V10__add_password_changed_at.sql`.
+  - When a password is changed (`POST /api/users/me/change-password`), update `password_changed_at = now()`.
+  - In `JwtAuthFilter`, verify that the token's `iat` (issued-at) claim is strictly after `password_changed_at`. Tokens issued prior to the password change are instantly rejected with `401 Unauthorized`.
+  - *Recommendation:* Option 2 provides enterprise-grade session termination across all devices when credentials change. Requires user approval prior to generating migration `V10`.
+
 ## 5. Authorization Matrix
 | Resource / Action | Anonymous | Authenticated User | Room Participant | Room Host |
 | :--- | :---: | :---: | :---: | :---: |
 | Register / Login / Verify OTP | Yes | Yes | Yes | Yes |
+| View / Edit Profile (`/api/users/me`)| No | Yes | Yes | Yes |
+| Change Password / Delete Account | No | Yes | Yes | Yes |
 | Create Meeting Room | No | Yes | Yes | Yes |
 | Join Room WebSocket | No | Yes (if $<5$) | Yes | Yes |
 | Send / Receive Chat | No | No | Yes | Yes |

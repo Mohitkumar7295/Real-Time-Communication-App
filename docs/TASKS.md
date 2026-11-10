@@ -77,15 +77,25 @@
   - Steps: Generate 6-digit SecureRandom OTP; hash at rest in `otp_challenges`; send via EmailService (console log in dev, Resend in prod); implement `POST /verify-otp` and `POST /resend-otp` with 60s cooldown and 5-attempt limit; issue JWT upon success.
   - Done when: Correct OTP yields JWT; wrong/expired OTP returns 401; 5 failed attempts locks challenge (429). Test: Unit test verifying OTP generation, hashing, attempt counter, and lockout.
 
+- [ ] **T-3.4 User: Profile Endpoints & Account Lifecycle** (FR-1, FR-1A)
+  - Files: `UserController.java`, `UserService.java`, `UpdateProfileRequest.java`, `ChangePasswordRequest.java`, `DeleteAccountRequest.java`
+  - Steps: Implement PATCH /api/users/me (name update, 2-50 chars), POST /api/users/me/change-password (BCrypt validation, rate limited 429), and DELETE /api/users/me (password verification, 409 active room conflict check, cascading deletion). Ensure GET /api/users/me includes createdAt.
+  - Done when: Profile updates, password changes, and account deletion pass all security checks. Test: `mvn test -Dtest=UserControllerTest`.
+
 - [ ] **T-4.1 Rooms: Lifecycle & Capacity Service** (FR-4, FR-5, FR-6, FR-7)
   - Files: `RoomController.java`, `RoomService.java`, `RoomCodeGenerator.java`, `dto/*`
   - Steps: Implement RoomCodeGenerator (unguessable codes), RoomService (create, count, end), and REST endpoints.
   - Done when: Users create rooms; capacity limit (<=5) and host closing work. Test: `mvn test -Dtest=RoomServiceTest`.
 
-- [ ] **T-5.1 Frontend: Auth Pages & API Client** (FR-1, FR-3, FR-3A, FR-3B)
-  - Files: `static/css/*.css`, `static/js/config.js`, `api.js`, `auth.js`, `dashboard.js`, `*.html`
-  - Steps: Build api.js with JWT injection; build signup.html, login.html (supporting two-step OTP entry and resend), and dashboard.html.
-  - Done when: User registers, completes two-step login with OTP, and navigates to dashboard. Test: Browser test completing signup, step 1 login, OTP verification, and dashboard load.
+- [x] **T-5.1 Frontend: Auth Pages & API Client** (FR-1, FR-3, FR-3A, FR-3B)
+  - Files: `static/css/*.css`, `static/js/config.js`, `api.js`, `auth.js`, `*.html`
+  - Steps: Build api.js with JWT injection and mock switch; build signup.html and login.html supporting two-step OTP entry and resend.
+  - Done when: User registers, completes two-step login with OTP, and connects to live backend. Test: Browser test completing signup, step 1 login, and OTP verification.
+
+- [ ] **T-5.2 Frontend: Dashboard Home & User Profile** (FR-1A, FR-1B)
+  - Files: `static/dashboard.html`, `static/profile.html`, `static/css/app.css`, `static/js/layout.js`, `static/js/dashboard.js`, `static/js/profile.js`
+  - Steps: Build shared layout.js (accessible header, user initials avatar, dropdown, route guard); replace dashboard.html with time-based greeting, start/join cards, recent meetings list, and on-demand device check; build profile.html with editable name, password change, and account deletion.
+  - Done when: User updates profile, changes password, tests media devices, and launches/joins meetings. Test: Browser verification in both mock and live modes.
 
 - [ ] **T-6.1 Signaling: WebSocket & Session Registry** (FR-24, FR-25)
   - Files: `WebSocketConfig.java`, `JwtHandshakeInterceptor.java`, `RoomSessionRegistry.java`

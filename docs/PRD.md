@@ -32,6 +32,15 @@
   - *AC-1.4 (Lockout & Expiry):* **Given** 5 wrong attempts or expired OTP (>5m), **when** submitted, **then** challenge is invalidated.
   - *AC-1.5 (Resend Cooldown):* **Given** challenge within 60s, **when** resend requested, **then** request is rejected with 429.
 
+### A1. User Profile & Account Management
+- **FR-1A (Profile Management):** Authenticated users can view their profile details (`name`, `email`, `createdAt`), edit their display name (2–50 characters, trimmed; email is read-only), update their password (verifying current password with BCrypt, enforcing $\ge 8$ characters with letter and number, rejecting identical new passwords), and delete their account with password confirmation.
+- **FR-1B (Dashboard Home & Readiness):** Authenticated users land on a dashboard featuring a time-of-day greeting ("Good morning / afternoon / evening, {Name}"), two prominent primary actions (Start Meeting and Join with Code with client-side uppercase auto-trim validation), a "Recent meetings" table/list with empty-state guidance, and an on-demand "Before you join" camera/mic readiness tool with zero auto-prompting on load.
+- **Acceptance Criteria:**
+  - *AC-1.6 (Profile Update):* **Given** authenticated user, **when** updating name to 2–50 characters, **then** name updates in database, success message appears, and layout header avatar/name reflects the change.
+  - *AC-1.7 (Change Password):* **Given** authenticated user, **when** submitting correct current password and valid different new password, **then** password updates, fields clear, and success message displays. Wrong current password returns 401; identical password returns 400.
+  - *AC-1.8 (Account Deletion):* **Given** authenticated user, **when** providing correct password and confirmation, **then** user record and cascading data are deleted, session is destroyed, and user redirects to landing page. If user hosts an active room, returns 409 Conflict.
+  - *AC-1.9 (Dashboard & Device Check):* **Given** dashboard user, **when** clicking "Check devices", **then** browser prompts for media permission on demand, displays live permission and hardware status (allowed, blocked, or not found), and releases tracks immediately.
+
 ### B. Room Management
 - **FR-4:** Users must create rooms with unique alphanumeric codes and join via code or URL (`/room/{code}`).
 - **FR-5:** Rooms must maintain live participant lists and enforce a 5-participant maximum.

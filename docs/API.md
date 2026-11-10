@@ -50,8 +50,29 @@
 - **Errors:** `400` (invalid challenge), `429` (cooldown active: 60s minimum wait, or max 3 resends).
 
 ### 3.3 `GET /api/users/me` (FR-1)
-- **Auth:** Authenticated User.
-- **Success:** `200 OK` $\to$ `{"id": 1, "name": "Aarav", "email": "a@ex.com"}`. Errors: `401`.
+- **Auth:** Authenticated User (`Bearer <JWT>`).
+- **Success:** `200 OK` $\to$ `{"id": 1, "name": "Aarav", "email": "a@ex.com", "createdAt": "2026-11-09T05:30:00Z"}`.
+- **Errors:** `401 Unauthorized` (missing/invalid token).
+
+### 3.3A `PATCH /api/users/me` (FR-1A)
+- **Auth:** Authenticated User (`Bearer <JWT>`).
+- **Request:** `{"name": "Aarav Kumar"}` (name $\ge 2$ and $\le 50$ characters, trimmed; email cannot be changed here).
+- **Success:** `200 OK` $\to$ `{"id": 1, "name": "Aarav Kumar", "email": "a@ex.com", "createdAt": "2026-11-09T05:30:00Z"}`.
+- **Errors:** `400 Bad Request` (name length <2 or >50, blank), `401 Unauthorized` (missing/expired token).
+
+### 3.3B `POST /api/users/me/change-password` (FR-1A)
+- **Auth:** Authenticated User (`Bearer <JWT>`).
+- **Request:** `{"currentPassword": "OldPassword1!", "newPassword": "NewPassword2@"}` (same strength rules as registration: $\ge 8$ characters, at least 1 letter and 1 digit).
+- **Rules:** Validates current password using BCrypt; rejects new password if identical to current password; rate limited (5 attempts per minute per user/IP).
+- **Success:** `204 No Content`.
+- **Errors:** `400 Bad Request` (validation failure / new password matches current password), `401 Unauthorized` (incorrect current password or missing token), `429 Too Many Requests` (rate limited).
+
+### 3.3C `DELETE /api/users/me` (FR-1A)
+- **Auth:** Authenticated User (`Bearer <JWT>`).
+- **Request:** `{"password": "Password1!"}`.
+- **Rules:** Verifies account password using BCrypt before deletion; rate limited (5 attempts per 15 minutes). If user is currently hosting an active room, returns `409 Conflict`. Upon confirmation, permanently deletes the user account and cascades room participation, files, messages, and OTP challenges.
+- **Success:** `204 No Content`.
+- **Errors:** `400 Bad Request` (missing password), `401 Unauthorized` (incorrect password or missing token), `409 Conflict` ("Cannot delete account while hosting an active meeting. Please end the meeting first."), `429 Too Many Requests`.
 
 ### 3.4 `POST /api/rooms` (FR-4)
 - **Auth:** Authenticated User.

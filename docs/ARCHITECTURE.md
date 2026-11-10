@@ -246,6 +246,7 @@ meetapp/
     │           ├── login.html                  # User login page with email/password form
     │           ├── signup.html                 # User registration page with client-side password strength validation
     │           ├── dashboard.html              # Authenticated user hub: create meeting, join by code, recent meetings
+    │           ├── profile.html                # User profile management: display details, change password, delete account
     │           ├── prejoin.html                # Pre-meeting hardware test: camera preview, mic level, toggle state (FR-8)
     │           ├── room.html                   # Main collaboration room: video grid, whiteboard, chat, files drawer
     │           ├── ended.html                  # Post-meeting screen showing summary and redirect to dashboard
@@ -254,12 +255,15 @@ meetapp/
     │           ├── css/
     │           │   ├── base.css                # Global CSS reset, typography, theme variables, and responsive layout
     │           │   ├── auth.css                # Styling for authentication forms and card containers
+    │           │   ├── app.css                 # Styling for authenticated pages: dashboard layout, profile forms, account menu
     │           │   └── room.css                # Layout for video grid, floating toolbar, drawers, and whiteboard canvas
     │           └── js/
     │               ├── config.js               # Central runtime configuration: API base URLs, WS endpoints, timeouts
     │               ├── api.js                  # Fetch API wrapper appending Bearer JWT and handling 401 redirection
-    │               ├── auth.js                 # Login/registration form handling, token persistence in localStorage, logout
-    │               ├── dashboard.js            # Dashboard logic: creating rooms, parsing room codes, joining meetings
+    │               ├── auth.js                 # Login/registration form handling, token persistence in sessionStorage, logout
+    │               ├── layout.js               # Shared DOM-safe authenticated navigation, user initials avatar, and route guard
+    │               ├── dashboard.js            # Dashboard logic: creating rooms, parsing room codes, device readiness check
+    │               ├── profile.js              # Profile logic: name updates, password change, account deletion confirmation
     │               ├── socket.js               # WebSocket client managing connection, reconnection, heartbeat, and send()
     │               ├── webrtc.js               # RTCPeerConnection mesh manager: local stream, peer offers/answers/ICE (FR-10)
     │               ├── room.js                 # Room UI orchestration, dynamic video tile grid, media button toggles
@@ -306,7 +310,9 @@ meetapp/
 | `config.js` | Single source of truth for backend URLs, WebSocket paths, and constants. | None | Vanilla ES6 |
 | `api.js` | Generic HTTP client wrapper injecting `Authorization: Bearer <token>` and handling errors. | `config.js` | Fetch API |
 | `auth.js` | Handles registration and login form submissions, stores JWT, manages logout. | `api.js`, `config.js` | Vanilla JS, DOM |
-| `dashboard.js`| Binds dashboard interactions (create room, join room by code). | `api.js`, `config.js` | Vanilla JS, DOM |
+| `layout.js` | Generates slim authenticated header, initials badge, account dropdown, and route guard. | `auth.js`, `api.js` | Vanilla JS, DOM |
+| `dashboard.js`| Binds dashboard interactions (create room, join room by code, on-demand device check). | `layout.js`, `api.js`, `config.js` | Vanilla JS, DOM |
+| `profile.js` | Binds profile forms (update name, change password with strength meter, delete account). | `layout.js`, `api.js`, `auth.js` | Vanilla JS, DOM |
 | `socket.js` | Connects to `/ws`, manages automatic reconnection, and serializes/deserializes JSON. | `config.js` | WebSocket API |
 | `webrtc.js` | Manages `RTCPeerConnection` mesh instances, ICE candidate exchange, and remote video tracks. | `socket.js`, `api.js` | WebRTC API |
 | `room.js` | Orchestrates room UI, renders responsive video grid, handles mic/camera toggle buttons. | `webrtc.js`, `socket.js` | Vanilla JS, CSS Grid |

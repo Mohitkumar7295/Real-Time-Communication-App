@@ -28,8 +28,7 @@ uploads/
 .DS_Store
 Thumbs.db
 
-# InsForge & AI agent skills
-.insforge
+# AI agent skills
 .agent
 .agents
 .augment

@@ -1,13 +1,13 @@
 # MeetApp — Deployment Guide (DEPLOYMENT.md)
 
 ## 1. Overview & Production Architecture
-MeetApp is packaged as a lightweight Docker container and deployed to cloud PaaS providers (Render or Railway). The application connects to a managed PostgreSQL database hosted on InsForge over an encrypted SSL connection, with external STUN/TURN servers facilitating WebRTC media traversal across restrictive client firewalls.
+MeetApp is packaged as a lightweight Docker container and deployed to cloud PaaS providers (Render or Railway). The application connects to a managed PostgreSQL database over an encrypted SSL connection, with external STUN/TURN servers facilitating WebRTC media traversal across restrictive client firewalls.
 
 ```mermaid
 graph TD
     Client["Client Browser (HTTPS / WSS)"] --> CDN["Cloud Platform Edge (Render / Railway)"]
     CDN --> Container["Spring Boot 3 Docker Container (:8080)"]
-    Container --> DB[("InsForge PostgreSQL (sslmode=require)")]
+    Container --> DB[("PostgreSQL (sslmode=require)")]
     Container --> LocalDisk[("Ephemeral Storage (/uploads)")]
     Client -.->|"WebRTC Relay"| TurnServer["Metered / Twilio TURN Server"]
     Client <-->|"P2P Mesh Media"| PeerClient["Remote Peer Browser"]
@@ -29,7 +29,7 @@ All production configuration is supplied via platform environment variables:
 
 | Variable | Purpose | Example Placeholder | Required | Secret? |
 | :--- | :--- | :--- | :---: | :---: |
-| `DB_URL` | PostgreSQL JDBC connection string | `jdbc:postgresql://db.insforge.com:5432/meetapp?sslmode=require` | Yes | No |
+| `DB_URL` | PostgreSQL JDBC connection string | `jdbc:postgresql://db.example.com:5432/meetapp?sslmode=require` | Yes | No |
 | `DB_USER` | Database username | `meetapp_user` | Yes | No |
 | `DB_PASSWORD` | Database password | `[PLACEHOLDER: DB_PASSWORD]` | Yes | Yes |
 | `JWT_SECRET` | 256-bit key for signing tokens | `[PLACEHOLDER: JWT_SECRET_256_BITS]` | Yes | Yes |
@@ -77,16 +77,12 @@ docker run -p 8080:8080 --env-file .env meetapp:latest
 
 ---
 
-## 7. Database Setup on InsForge
-1. Create a PostgreSQL database on InsForge.
-2. Obtain the connection parameters and construct the JDBC string:  
+## 7. Production Database Setup
+1. Provision a PostgreSQL 15+ database on your chosen cloud provider (e.g., Railway Postgres, Neon, Supabase, or AWS RDS).
+2. Obtain connection parameters and construct the JDBC string:  
    `jdbc:postgresql://<HOST>:<PORT>/<DATABASE>?sslmode=require`
-3. Flyway executes automatically on initial container startup, creating all 5 tables and indexes.
-4. Verify database isolation: Confirm Row-Level Security (RLS) is active to prevent exposure through InsForge's auto REST API:
-   ```sql
-   SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
-   ```
-5. *Fallback:* If direct JDBC access is restricted on specific InsForge plans, repoint `DB_URL` to any cloud PostgreSQL provider (e.g., Supabase, Neon, or Railway Postgres) without application changes.
+3. Flyway executes automatically on initial container startup, creating all tables and indexes.
+4. Verify database connectivity: Ensure network security rules permit inbound JDBC traffic from your app deployment.
 
 ---
 

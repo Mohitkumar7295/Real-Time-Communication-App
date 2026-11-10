@@ -3,7 +3,7 @@
 ## 1. System Overview
 MeetApp is a real-time web video conferencing and collaboration platform designed for up to 5 concurrent participants per meeting room. The application pairs a modular Spring Boot 3.x monolith backend with a browser-native frontend and full-mesh WebRTC topology. 
 
-Client browsers execute UI logic and WebRTC peer connections locally. The backend acts strictly as an authentication authority, metadata repository, file custodian, and real-time WebSocket signaling relay. Raw audio, video, and screen-sharing media streams flow directly peer-to-peer between browsers via WebRTC (DTLS-SRTP); the Spring Boot application server never captures, decodes, or proxies media streams. Persistent state (users, rooms, audit metadata) resides in a PostgreSQL database hosted on InsForge (accessed strictly via standard JDBC/JPA with Flyway migrations), while temporary file uploads reside on local disk storage abstracted behind a storage service interface. Public STUN/TURN servers assist peers with NAT/firewall traversal.
+Client browsers execute UI logic and WebRTC peer connections locally. The backend acts strictly as an authentication authority, metadata repository, file custodian, and real-time WebSocket signaling relay. Raw audio, video, and screen-sharing media streams flow directly peer-to-peer between browsers via WebRTC (DTLS-SRTP); the Spring Boot application server never captures, decodes, or proxies media streams. Persistent state (users, rooms, audit metadata) resides in a PostgreSQL database (accessed strictly via standard JDBC/JPA with Flyway migrations), while temporary file uploads reside on local disk storage abstracted behind a storage service interface. Public STUN/TURN servers assist peers with NAT/firewall traversal.
 
 ---
 
@@ -33,7 +33,7 @@ graph TD
     end
 
     subgraph ExternalServices["External Infrastructure"]
-        PostgresDB[("InsForge PostgreSQL (Flyway Migrations)")]
+        PostgresDB[("PostgreSQL Database (Flyway Migrations)")]
         LocalDisk[("Local File Storage (/uploads)")]
         StunTurn["STUN / TURN Relay Servers"]
     end
@@ -62,7 +62,7 @@ graph TD
     Client["Client Browser Request (REST / WebSocket)"] --> ControllerLayer["Controller / Handler Layer<br/>(HTTP Routing, DTO Validation, WS Dispatch)"]
     ControllerLayer --> ServiceLayer["Service Layer<br/>(Business Logic, Transaction Management, Session State)"]
     ServiceLayer --> RepositoryLayer["Repository Layer<br/>(Spring Data JPA Interfaces)"]
-    RepositoryLayer --> Database[("PostgreSQL Database (InsForge)")]
+    RepositoryLayer --> Database[("PostgreSQL Database")]
 ```
 
 ### 2.3 Backend Feature-Dependency Diagram
@@ -96,7 +96,7 @@ graph TD
 | **Security & Auth** | Spring Security 6 & JJWT | Stateless authentication, BCrypt password hashing, and JWT authorization filter. |
 | **Data Persistence** | Spring Data JPA & Hibernate | Object-Relational Mapping (ORM) connecting via standard PostgreSQL JDBC. |
 | **Schema Migration** | Flyway | Versioned database migrations (`V1` to `V5`); `ddl-auto=validate`. |
-| **Database Host** | InsForge PostgreSQL | Managed PostgreSQL instance used strictly as raw relational database. |
+| **Database Host** | PostgreSQL 15+ | Managed or containerized PostgreSQL instance accessed via standard JDBC. |
 | **File Storage** | Local Disk (`StorageService`) | Ephemeral server disk storage with file path sanitization and metadata tracking. |
 | **Media Engine** | Browser WebRTC API | Direct peer-to-peer audio, video, and screen sharing (`RTCPeerConnection`). |
 | **NAT Traversal** | STUN / TURN | Session traversal and relay utilities configured via dynamic backend API. |
@@ -230,7 +230,7 @@ meetapp/
     │   └── resources/
     │       ├── application.yml                 # Base Spring Boot configuration (JPA, Flyway, file limits, actuator)
     │       ├── application-dev.yml             # Local dev profile (Postgres localhost, relaxed logging, debug mode)
-    │       ├── application-prod.yml            # Production profile (InsForge Postgres with sslmode=require, strict CORS)
+    │       ├── application-prod.yml            # Production profile (PostgreSQL with sslmode=require, strict CORS)
     │       ├── db/migration/                   # Flyway versioned SQL migration scripts
     │       │   ├── V1__users.sql               # Creates users table and email unique index
     │       │   ├── V2__rooms.sql               # Creates rooms table and room_code unique index
@@ -326,23 +326,24 @@ To guarantee maintainability, code modularity, and clean isolation:
 
 ---
 
-## 7. Database Summary & InsForge Hosting Rules
+## 7. Database Summary & Architecture Rules
 
 ### 7.1 Relational Schema Summary
-The database contains five relational tables. Full DDL scripts reside in `docs/DATABASE.md`:
+The database contains relational tables managed via Flyway. Full DDL scripts reside in `docs/DATABASE.md`:
 - `users`: Stores user identity, authentication, and credentials (`id`, `email`, `password_hash`, `full_name`, `created_at`, `updated_at`). Email is unique and indexed.
 - `rooms`: Tracks meeting room instances (`id`, `room_code`, `host_user_id`, `is_active`, `created_at`, `ended_at`). `room_code` is unique and indexed. Foreign key references `users(id)`.
 - `room_participants`: Tracks participant membership history (`id`, `room_id`, `user_id`, `joined_at`, `left_at`). Foreign keys reference `rooms(id)` and `users(id)`.
 - `files`: Tracks metadata for files shared in rooms (`id`, `room_id`, `uploader_id`, `original_filename`, `stored_filename`, `file_size`, `content_type`, `created_at`). Foreign keys reference `rooms(id)` and `users(id)`.
 - `messages`: Persists text chat history for auditability (`id`, `room_id`, `sender_id`, `content`, `sent_at`). Foreign keys reference `rooms(id)` and `users(id)`.
+- `otp_challenges`: Tracks two-step verification challenges (`id`, `user_id`, `otp_hash`, `expires_at`, `attempts`, `consumed`, `created_at`, `last_sent_at`).
 - *Whiteboard strokes are stored exclusively in backend in-memory buffers* for the duration of the active room session; they are not persisted to SQL tables.
 
-### 7.2 InsForge Hosting and Security Rules
-1. **Database Only:** InsForge is used strictly as a managed PostgreSQL hosting provider. The application must never use InsForge Auth, InsForge Edge Functions, or auto-generated InsForge REST APIs.
-2. **Flyway Ownership:** The database schema is strictly owned and managed by Flyway versioned migrations (`src/main/resources/db/migration/V1__*.sql` through `V5__*.sql`). Hibernate auto-DDL is permanently locked to `spring.jpa.hibernate.ddl-auto=validate`. Developers must never manually alter tables in the InsForge dashboard.
-3. **Connection Security:** Database connections are supplied via environment variables (`DB_URL`, `DB_USER`, `DB_PASSWORD`) and must mandate SSL encryption (`sslmode=require`).
-4. **Row-Level Security & Exposure:** No database table may be publicly exposed through InsForge auto-APIs without row-level security enabled, specifically because the `users` table holds BCrypt password hashes.
-5. **Fallback:** If direct JDBC access is restricted on specific InsForge free tiers, the connection string in `DB_URL` seamlessly points to any standard self-hosted PostgreSQL instance or alternative cloud PostgreSQL provider without code modifications.
+### 7.2 Database Hosting and Security Rules
+1. **Raw Database Authority:** PostgreSQL is used strictly as a relational database. All authentication, validation, signaling, and business logic reside entirely within Spring Boot.
+2. **Flyway Ownership:** The database schema is strictly owned and managed by Flyway versioned migrations (`src/main/resources/db/migration/V1__*.sql` through `V7__*.sql`). Hibernate auto-DDL is permanently locked to `spring.jpa.hibernate.ddl-auto=validate`. Developers must never manually alter tables out-of-band.
+3. **Connection Security:** Database connections are supplied via environment variables (`DB_URL`, `DB_USER`, `DB_PASSWORD`) and mandate SSL encryption (`sslmode=require`) in production.
+4. **Row-Level Security & Exposure:** Row-level security is configured as defense-in-depth, protecting user credentials and meeting records.
+5. **Portability:** The connection string in `DB_URL` points seamlessly to local Docker Compose PostgreSQL or any cloud PostgreSQL provider without code modifications.
 
 ---
 
@@ -806,8 +807,8 @@ To ensure clean development and continuous testability, implementation tasks fol
 | :--- | :--- | :--- |
 | **Full Mesh WebRTC** | SFU / MCU media server | Zero media server infrastructure cost; avoids complex media encoding on the server; ideal for small rooms ($\le 5$). |
 | **Plain WebSocket Handler** | STOMP over SockJS | Eliminates STOMP protocol overhead; simple lightweight JSON envelopes provide exact control over signaling dispatch. |
-| **Custom JWT & BCrypt** | InsForge Auth / OAuth2 | Demonstrates complete backend security engineering; ensures zero vendor lock-in; keeps credentials under strict application control. |
-| **InsForge as DB Only** | InsForge BaaS (Edge/Auth/APIs) | Preserves enterprise architectural boundaries; ensures business logic resides entirely within the Spring Boot service layer. |
+| **Custom JWT & BCrypt** | Third-party Auth / BaaS | Demonstrates complete backend security engineering; ensures zero vendor lock-in; keeps credentials under strict application control. |
+| **Spring Boot Monolith** | Serverless / BaaS Platform | Preserves enterprise architectural boundaries; ensures business logic resides entirely within the Spring Boot service layer. |
 | **Flyway Schema Migrations** | Hibernate `ddl-auto=update` | Guarantees deterministic, version-controlled database evolution; eliminates risk of unintended schema corruption in production. |
 | **Local Disk Storage** | AWS S3 / Cloud Storage | Simple, self-contained implementation for internship project scope; cleanly isolated behind `StorageService` interface for future swap. |
 | **Package-by-Feature** | Package-by-Layer | Groups related logic (controller, service, repository, DTO) together; enforces clean modular boundaries and easier maintenance. |

@@ -140,10 +140,10 @@ UPDATE rooms SET is_active = FALSE, ended_at = NOW() WHERE room_code = :roomCode
 SELECT m.id, m.content, m.sent_at, u.name AS sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.room_id = :roomId ORDER BY m.sent_at ASC LIMIT 50;
 ```
 
-## 9. Data Lifecycle & InsForge RLS
+## 9. Data Lifecycle & Row-Level Security
 - **Active Call:** Real-time writes for participants, chat, and files.
 - **Disk File Deletion:** Deleting a file row triggers `LocalStorageService.deleteFile(stored_name)`.
-- **InsForge Defense (RLS):**
+- **Database Defense (RLS):**
 ```sql
 ALTER TABLE users ENABLE ROW LEVEL SECURITY; ALTER TABLE otp_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY; ALTER TABLE room_participants ENABLE ROW LEVEL SECURITY;

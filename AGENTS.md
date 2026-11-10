@@ -51,7 +51,7 @@ meetapp/
 ```
 
 ### Database Hosting
-InsForge hosts PostgreSQL only; no InsForge Auth, edge functions or auto APIs; Flyway owns the schema (`ddl-auto=validate`); env vars only (`DB_URL`, `DB_USER`, `DB_PASSWORD`); `sslmode=require`. No table may be publicly exposed through InsForge auto APIs without row-level security. Fallback: self-hosted PostgreSQL or another Postgres host.
+PostgreSQL database (self-hosted via Docker Compose or managed cloud PostgreSQL); Spring Boot backend owns authentication, signaling, and file storage; Flyway owns the schema (`ddl-auto=validate`); env vars only (`DB_URL`, `DB_USER`, `DB_PASSWORD`); `sslmode=require` in production.
 
 ## 4. Read-First Rule
 - Always inspect and read `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/SECURITY.md`, and `docs/TASKS.md` before starting any task.
@@ -131,23 +131,4 @@ A task is complete ONLY when:
 4. Security constraints are met (no hardcoded secrets, input validated, permissions enforced).
 5. The task is checked off in `docs/TASKS.md` and modified files are summarized.
 
-<!-- INSFORGE:START -->
-## InsForge backend
 
-This project uses [InsForge](https://insforge.dev): an all-in-one, open-source Postgres-based backend (BaaS) that gives this app a database, authentication, file storage, edge functions, realtime, an AI model gateway, and payments through one platform.
-
-- **Project:** **MeetApp web application** (API base `https://srri4fvv.ap-southeast.insforge.app`)
-- **Skills:** these InsForge skills are installed for supported coding agents. Reach for them before implementing any InsForge feature instead of guessing the API:
-  - `insforge`: app code with the `@insforge/sdk` client (database CRUD, auth, storage, edge functions, realtime, AI, email, and Stripe payments).
-  - `insforge-cli`: backend and infrastructure via the `insforge` CLI (projects, SQL, migrations, RLS policies, storage buckets, functions, secrets, payment setup, schedules, deploys).
-  - `insforge-debug`: diagnosing failures (SDK/HTTP errors, RLS denials, auth and OAuth issues) and running security or performance audits.
-  - `insforge-integrations`: wiring external auth providers (Clerk, Auth0, WorkOS, Better Auth, etc.) for JWT-based RLS, or the OKX x402 payment facilitator.
-  - `find-skills`: discovering additional skills on demand.
-- **Credentials:** app code reads keys from `.env.local`; the CLI reads `.insforge/project.json`. Never hardcode or commit keys.
-
-Key patterns:
-
-- Database inserts take an array: `insert([{ ... }])`.
-- Reference users with `auth.users(id)`; use `auth.uid()` in RLS policies.
-- For storage uploads, persist both the returned `url` and `key`.
-<!-- INSFORGE:END -->

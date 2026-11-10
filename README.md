@@ -3,7 +3,7 @@
 [![Java 17](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
 [![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![WebRTC](https://img.shields.io/badge/WebRTC-Peer--to--Peer-blue.svg)](https://webrtc.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-InsForge-blue.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 MeetApp is a lightweight, browser-native video conferencing platform featuring WebRTC mesh calling, screen sharing, canvas whiteboard sync, file sharing, and chat.
@@ -40,7 +40,7 @@ MeetApp is a lightweight, browser-native video conferencing platform featuring W
 | **Backend** | Java 17, Spring Boot 3.x | Enterprise application core, REST APIs, and signaling |
 | **Signaling** | Spring WebSocket (JSON) | Real-time session coordination and peer discovery |
 | **Media** | Browser WebRTC API | Direct peer-to-peer audio, video, and screen sharing |
-| **Database** | PostgreSQL (InsForge) | User accounts, rooms, participant history, file metadata |
+| **Database** | PostgreSQL | User accounts, rooms, participant history, file metadata |
 | **Migrations** | Flyway | Automated database schema management |
 | **Frontend** | HTML5, CSS3, Vanilla JS | Client UI served from Spring Boot static resources |
 
@@ -58,7 +58,7 @@ graph TD
     BrowserB -->|"HTTPS / REST"| Backend
     BrowserA <-->|"WSS / Signaling"| Backend
     BrowserB <-->|"WSS / Signaling"| Backend
-    Backend --> DB[("PostgreSQL (InsForge)")]
+    Backend --> DB[("PostgreSQL")]
     Backend --> LocalStorage[("Local Disk (/uploads)")]
     BrowserA -.->|"STUN/TURN"| StunTurn["STUN / TURN Server"]
     BrowserB -.->|"STUN/TURN"| StunTurn
@@ -147,7 +147,7 @@ Details: [docs/SECURITY.md](docs/SECURITY.md).
 | :--- | :--- |
 | [docs/PRD.md](docs/PRD.md) | Product Requirements Document: personas, FRs, and scope |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture Design: system diagrams, packages, and mesh model |
-| [docs/DATABASE.md](docs/DATABASE.md) | Database schema, Flyway migrations, and InsForge RLS rules |
+| [docs/DATABASE.md](docs/DATABASE.md) | Database schema, Flyway migrations, and indexing strategy |
 | [docs/API.md](docs/API.md) | REST API and WebSocket signaling protocol specification |
 | [docs/SECURITY.md](docs/SECURITY.md) | Threat modeling, encryption mapping, and security guardrails |
 | [docs/TASKS.md](docs/TASKS.md) | Sequential implementation task list across Phases 0–15 |

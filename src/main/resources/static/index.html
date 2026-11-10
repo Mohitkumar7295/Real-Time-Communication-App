@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MeetApp — Private meeting rooms in your browser with multi-user video, screen sharing, file transfer, chat, and a collaborative whiteboard.">
+  <title>MeetApp — Meet, share and sketch in one room</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+  <!-- Accessible Skip Link -->
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Global Header -->
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-brand" aria-label="MeetApp Home">MeetApp</a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <ul class="nav-links">
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#security">Security</a></li>
+        </ul>
+        <div class="nav-actions">
+          <a href="login.html" class="btn btn-ghost">Log in</a>
+          <a href="signup.html" class="btn btn-primary">Create account</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Hero Section -->
+    <section class="hero-section" aria-labelledby="hero-heading">
+      <div class="container">
+        <div class="hero-grid">
+          <!-- Left Column: Copy & Actions -->
+          <div class="hero-copy">
+            <h1 id="hero-heading" class="hero-headline">Meet, share and sketch in one room.</h1>
+            <p class="hero-subline">
+              Open a room, send the link, and talk face to face. Screen sharing, files, chat and a shared whiteboard are built in.
+            </p>
+            <div class="hero-actions">
+              <a href="signup.html" class="btn btn-primary">Create account</a>
+              <a href="login.html" class="btn btn-secondary">Log in</a>
+            </div>
+            <p class="hero-note">Free. Up to 5 people per room. Works in your browser without downloads.</p>
+          </div>
+
+          <!-- Right Column: CSS-Crafted Meeting Mock (Believable, Clean, Non-AI) -->
+          <div class="hero-visual" aria-hidden="true">
+            <div class="meeting-mock">
+              <div class="mock-header">
+                <div class="mock-room-meta">
+                  <span class="mock-live-indicator" title="Meeting in progress"></span>
+                  <span>Room: ARCH-SYNC</span>
+                  <span class="text-xs text-muted">&bull; 00:14:28</span>
+                </div>
+                <span class="mock-badge">2 of 5 joined</span>
+              </div>
+              <div class="mock-stage">
+                <!-- Participant 1: Virat (Speaking) -->
+                <div class="mock-tile mock-tile-active">
+                  <div class="mock-tile-header">
+                    <span class="mock-hd-tag">HD</span>
+                  </div>
+                  <div class="mock-avatar">VK</div>
+                  <div class="mock-tile-footer">
+                    <div class="mock-tile-name">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      </svg>
+                      <span>Virat (You)</span>
+                    </div>
+                    <!-- Active Speaking Sound Wave Bars -->
+                    <div class="mock-speaking-waves" title="Speaking">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Participant 2: Anushka -->
+                <div class="mock-tile">
+                  <div class="mock-tile-header">
+                    <span class="mock-hd-tag">HD</span>
+                  </div>
+                  <div class="mock-avatar">AS</div>
+                  <div class="mock-tile-footer">
+                    <div class="mock-tile-name">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      </svg>
+                      <span>Anushka S.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Shared Whiteboard Canvas Tile -->
+                <div class="mock-tile-board">
+                  <div class="mock-board-bar">
+                    <div class="mock-board-title">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m18 2 4 4-14 14H4v-4L18 2z"/>
+                      </svg>
+                      <span>Whiteboard &bull; Shared Architecture</span>
+                    </div>
+                    <div class="mock-board-tools">
+                      <span class="mock-tool-pill">Pen</span>
+                      <div class="mock-swatch-group">
+                        <span class="mock-swatch" style="background-color: var(--accent);"></span>
+                        <span class="mock-swatch" style="background-color: var(--ink);"></span>
+                        <span class="mock-swatch" style="background-color: var(--error);"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Theme-Adaptive Crisp Architectural Diagram -->
+                  <svg class="mock-board-sketch" viewBox="0 0 320 80" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Left Node: Virat (Browser A) -->
+                    <rect x="12" y="38" width="82" height="34" rx="4" class="sketch-node" stroke="var(--accent)" fill="var(--accent-tint)"/>
+                    <text x="53" y="54" text-anchor="middle" class="sketch-text-accent">Virat (You)</text>
+                    <text x="53" y="65" text-anchor="middle" class="sketch-text-muted">WebRTC Peer</text>
+
+                    <!-- Right Node: Anushka (Browser B) -->
+                    <rect x="226" y="38" width="82" height="34" rx="4" class="sketch-node" stroke="var(--border)" fill="var(--surface-alt)"/>
+                    <text x="267" y="54" text-anchor="middle" class="sketch-text">Anushka S.</text>
+                    <text x="267" y="65" text-anchor="middle" class="sketch-text-muted">WebRTC Peer</text>
+
+                    <!-- Center Top Node: Spring Boot Signaling -->
+                    <rect x="110" y="6" width="100" height="28" rx="4" class="sketch-node" stroke="var(--border)" fill="var(--surface)"/>
+                    <text x="160" y="23" text-anchor="middle" class="sketch-text">Signaling /ws</text>
+
+                    <!-- Signaling Dashed Lines -->
+                    <line x1="70" y1="38" x2="120" y2="34" stroke="var(--muted)" stroke-dasharray="3 3"/>
+                    <line x1="250" y1="38" x2="200" y2="34" stroke="var(--muted)" stroke-dasharray="3 3"/>
+
+                    <!-- Direct P2P Media Link -->
+                    <line x1="94" y1="55" x2="226" y2="55" stroke="var(--accent)" stroke-width="1.75"/>
+                    <polygon points="98,52 94,55 98,58" fill="var(--accent)"/>
+                    <polygon points="222,52 226,55 222,58" fill="var(--accent)"/>
+                    <text x="160" y="52" text-anchor="middle" class="sketch-text-accent" style="font-size: 8.5px; font-weight: 600;">P2P DTLS-SRTP</text>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Slim Bottom Meeting Toolbar -->
+              <div class="mock-controls">
+                <div class="mock-btn mock-btn-active" title="Microphone unmuted (Speaking)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  </svg>
+                </div>
+                <div class="mock-btn mock-btn-active" title="Camera enabled">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 8-6 4 6 4V8Z"/>
+                    <rect width="14" height="12" x="2" y="6" rx="2"/>
+                  </svg>
+                </div>
+                <div class="mock-btn" title="Share Screen">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="12" x="3" y="4" rx="2"/>
+                    <path d="M12 16v4"/>
+                    <path d="M8 20h8"/>
+                  </svg>
+                </div>
+                <div class="mock-btn" title="In-room Chat">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
+                  </svg>
+                </div>
+                <div class="mock-btn mock-btn-leave" title="Leave Meeting">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 17l5-5-5-5"/>
+                    <path d="M21 12H9"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how" class="how-section" aria-labelledby="how-heading">
+      <div class="container">
+        <div class="section-label">Workflow</div>
+        <h2 id="how-heading" class="section-heading">How a meeting happens</h2>
+        <ol class="steps-list">
+          <li class="step-item">
+            <span class="step-number" aria-hidden="true">1</span>
+            <h3 class="step-title">Sign in</h3>
+            <p class="step-desc">Log in with your email and verify your identity with a 6-digit one-time code sent directly to your inbox.</p>
+          </li>
+          <li class="step-item">
+            <span class="step-number" aria-hidden="true">2</span>
+            <h3 class="step-title">Open a room</h3>
+            <p class="step-desc">Create a room with one click and copy the 6-character room code. Send it to up to 4 other colleagues or friends.</p>
+          </li>
+          <li class="step-item">
+            <span class="step-number" aria-hidden="true">3</span>
+            <h3 class="step-title">Talk and collaborate</h3>
+            <p class="step-desc">Connect face to face over WebRTC, share your screen, sketch on the synchronized whiteboard, and pass documents.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Features Section (Editorial Two-Column List, No Cards) -->
+    <section id="features" class="features-section" aria-labelledby="features-heading">
+      <div class="container">
+        <div class="section-label">Capabilities</div>
+        <h2 id="features-heading" class="section-heading">Built for small, focused teams</h2>
+        <div class="features-grid">
+          <div class="feature-row">
+            <h3 class="feature-title">Video calls</h3>
+            <p class="feature-text">Crisp multi-party audio and video mesh for small groups of up to five participants, directly peer-to-peer.</p>
+          </div>
+          <div class="feature-row">
+            <h3 class="feature-title">Screen sharing</h3>
+            <p class="feature-text">Present your entire desktop, a browser tab, or a single application window with seamless webcam fallback on stop.</p>
+          </div>
+          <div class="feature-row">
+            <h3 class="feature-title">File sharing</h3>
+            <p class="feature-text">Share PDFs, images, archives, and design notes up to 10 MB directly with everyone in the active room.</p>
+          </div>
+          <div class="feature-row">
+            <h3 class="feature-title">Shared whiteboard</h3>
+            <p class="feature-text">Sketch diagrams and write equations simultaneously. Late joiners automatically receive the full canvas history.</p>
+          </div>
+          <div class="feature-row">
+            <h3 class="feature-title">Group chat</h3>
+            <p class="feature-text">In-room text messaging with timestamps and unread notification badges for questions and links.</p>
+          </div>
+          <div class="feature-row">
+            <h3 class="feature-title">Secure sign-in</h3>
+            <p class="feature-text">BCrypt password hashing and mandatory two-step email verification codes (2FA) keep accounts safe from credential theft.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Section (Plain, Honest, Specific) -->
+    <section id="security" class="security-section" aria-labelledby="security-heading">
+      <div class="container">
+        <div class="security-grid">
+          <div class="security-intro">
+            <div class="section-label">Security & Privacy</div>
+            <h2 id="security-heading">Clear about what we protect</h2>
+            <p>
+              MeetApp is built to be private, inspectable, and honest about its boundaries. We never sell your data or place third-party trackers on your calls.
+            </p>
+          </div>
+          <ul class="security-items">
+            <li class="security-item">
+              <span class="security-item-title">Encrypted media streams</span>
+              <span class="security-item-desc">Peer-to-peer video, audio, and screen sharing are protected by mandatory DTLS-SRTP encryption in the browser.</span>
+            </li>
+            <li class="security-item">
+              <span class="security-item-title">TLS transport security</span>
+              <span class="security-item-desc">All REST requests and WebSocket signaling messages are transported over HTTPS and WSS connections.</span>
+            </li>
+            <li class="security-item">
+              <span class="security-item-title">Two-step login with Email OTP</span>
+              <span class="security-item-desc">Every login requires a cryptographically generated 6-digit code. Plaintext passwords and codes are never logged or exposed.</span>
+            </li>
+            <li class="security-item">
+              <span class="security-item-title">In-transit chat and temporary file storage</span>
+              <span class="security-item-desc">Chat messages and files are transmitted securely over TLS to our signaling backend for room distribution. Chat is not end-to-end encrypted.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closing Call to Action -->
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-box">
+          <h2 class="cta-headline">Start your next meeting in seconds.</h2>
+          <a href="signup.html" class="btn btn-primary">Create free account</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-meta">
+          <strong>MeetApp</strong> &mdash; Built as part of the CodeAlpha internship.
+        </div>
+        <ul class="footer-links">
+          <li><a href="login.html">Log in</a></li>
+          <li><a href="signup.html">Create account</a></li>
+          <li><a href="#" rel="noopener">GitHub</a></li>
+          <li><span>&copy; 2026 MeetApp</span></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

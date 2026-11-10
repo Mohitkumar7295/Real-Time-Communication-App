@@ -1,0 +1,228 @@
+/* ==========================================================================
+   MeetApp — Authentication Stylesheet (auth.css)
+   Sign up, two-step login with OTP input, and editorial text panels
+   ========================================================================== */
+
+.auth-page {
+  padding-block: var(--space-12) var(--space-20);
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Two-column layout on desktop; single column on mobile */
+.auth-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-10);
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .auth-grid {
+    grid-template-columns: 1fr 1.15fr;
+    gap: var(--space-16);
+  }
+}
+
+/* Single-column centered container for login / OTP */
+.auth-single-column {
+  max-width: 440px;
+  margin-inline: auto;
+}
+
+/* Left Editorial Context Panel */
+.auth-editorial {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.auth-heading {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  line-height: 1.2;
+}
+
+.auth-subline {
+  font-size: var(--text-md);
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-reasons {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.auth-reason-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.auth-reason-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.auth-reason-desc {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Right Form Card */
+.auth-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: var(--space-5);
+  }
+}
+
+.auth-card-header {
+  margin-bottom: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.auth-card-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+}
+
+.auth-card-subtitle {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.auth-card-footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Dynamic Password Constraint Hint */
+.password-hint {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-top: var(--space-1);
+  transition: color var(--transition-fast);
+}
+
+.password-hint.valid {
+  color: var(--accent);
+}
+
+.password-hint.invalid {
+  color: var(--error);
+}
+
+/* --------------------------------------------------------------------------
+   Step 2: 6-Digit OTP Verification Box
+   -------------------------------------------------------------------------- */
+.otp-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.otp-inputs {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+.otp-digit {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+@media (max-width: 380px) {
+  .otp-digit {
+    width: 40px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+}
+
+.otp-digit:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  background-color: var(--surface);
+}
+
+.otp-digit[aria-invalid="true"] {
+  border-color: var(--error);
+  background-color: var(--error-bg);
+}
+
+.otp-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: var(--text-sm);
+}
+
+.resend-btn:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.otp-back-link {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.otp-back-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* Step Switching */
+.auth-step[hidden] {
+  display: none !important;
+}

@@ -1,0 +1,570 @@
+/* ==========================================================================
+   MeetApp — Landing Page Stylesheet (landing.css)
+   Editorial, asymmetrical layout with CSS-crafted meeting mock
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Hero Section
+   -------------------------------------------------------------------------- */
+.hero-section {
+  padding-block: var(--space-16) var(--space-20);
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-12);
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: var(--space-16);
+  }
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.hero-headline {
+  font-size: clamp(2.25rem, 4vw + 1rem, 3.25rem);
+  font-family: var(--font-serif);
+  line-height: 1.15;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.hero-subline {
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 52ch;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.hero-note {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-top: var(--space-1);
+}
+
+/* --------------------------------------------------------------------------
+   CSS Meeting Room Mock (Flat, Believable, Non-AI)
+   -------------------------------------------------------------------------- */
+.meeting-mock {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.mock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.mock-room-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.mock-live-indicator {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-tint);
+  animation: pulse-live 2s infinite ease-in-out;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.mock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--accent);
+  background-color: var(--accent-tint);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.mock-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.mock-tile {
+  background-color: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-3);
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.mock-tile-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}
+
+.mock-hd-tag {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 1px 4px;
+  border-radius: 2px;
+  background-color: var(--surface);
+}
+
+.mock-avatar {
+  margin: auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.05em;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.mock-tile-active {
+  border-color: var(--accent);
+}
+
+.mock-tile-active .mock-avatar {
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+.mock-tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.mock-tile-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Audio wave speaking animation */
+.mock-speaking-waves {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 10px;
+}
+
+.mock-speaking-waves span {
+  display: block;
+  width: 2px;
+  background-color: var(--accent);
+  border-radius: 1px;
+  animation: wave-bar 1.2s infinite ease-in-out;
+}
+
+.mock-speaking-waves span:nth-child(1) { height: 4px; animation-delay: 0.1s; }
+.mock-speaking-waves span:nth-child(2) { height: 10px; animation-delay: 0.25s; }
+.mock-speaking-waves span:nth-child(3) { height: 6px; animation-delay: 0.4s; }
+
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* Whiteboard Mini Preview Tile */
+.mock-tile-board {
+  grid-column: span 2;
+  aspect-ratio: auto;
+  min-height: 130px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mock-board-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.mock-board-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mock-board-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mock-tool-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 500;
+  gap: 4px;
+}
+
+.mock-swatch-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mock-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mock-board-sketch {
+  width: 100%;
+  height: 85px;
+}
+
+/* Dynamic theme-adaptive styling for SVG diagram */
+.sketch-node {
+  stroke-width: 1.5;
+  transition: all var(--transition-fast);
+}
+
+.sketch-text {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+
+.sketch-text-accent {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--accent);
+}
+
+.sketch-text-muted {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  fill: var(--muted);
+}
+
+/* Mock Floating Control Bar */
+.mock-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.mock-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.mock-btn-active {
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.mock-btn-leave {
+  background-color: var(--error-bg);
+  color: var(--error);
+  border-color: var(--error-border);
+}
+
+/* --------------------------------------------------------------------------
+   How It Works (Horizontal Line with Connecting Rule)
+   -------------------------------------------------------------------------- */
+.how-section {
+  padding-block: var(--space-16);
+  border-bottom: 1px solid var(--border);
+}
+
+.section-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.section-heading {
+  margin-bottom: var(--space-10);
+  max-width: 30ch;
+}
+
+.steps-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+  list-style: none;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .steps-list {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-8);
+  }
+
+  .steps-list::before {
+    content: "";
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    right: 20px;
+    height: 1px;
+    background-color: var(--border);
+    z-index: 0;
+  }
+}
+
+.step-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.step-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.step-desc {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Features (Editorial Two-Column List, No Cards)
+   -------------------------------------------------------------------------- */
+.features-section {
+  padding-block: var(--space-16);
+  border-bottom: 1px solid var(--border);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+@media (min-width: 768px) {
+  .features-grid {
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--space-12);
+  }
+}
+
+.feature-row {
+  border-top: 1px solid var(--border);
+  padding-block: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.features-grid .feature-row:last-child,
+.features-grid .feature-row:nth-last-child(2) {
+  border-bottom: 1px solid var(--border);
+}
+
+.feature-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+
+.feature-text {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: 1.55;
+  max-width: 50ch;
+}
+
+/* --------------------------------------------------------------------------
+   Security Section (Plain, Honest, Specific)
+   -------------------------------------------------------------------------- */
+.security-section {
+  padding-block: var(--space-16);
+  border-bottom: 1px solid var(--border);
+}
+
+.security-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+}
+
+@media (min-width: 800px) {
+  .security-grid {
+    grid-template-columns: 1fr 1.1fr;
+    gap: var(--space-12);
+  }
+}
+
+.security-intro p {
+  font-size: var(--text-md);
+  color: var(--ink);
+  line-height: 1.6;
+  margin-top: var(--space-3);
+}
+
+.security-items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.security-item {
+  border-top: 1px solid var(--border);
+  padding-block: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.security-item:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.security-item-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.security-item-desc {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Closing CTA Section
+   -------------------------------------------------------------------------- */
+.cta-section {
+  padding-block: var(--space-16) var(--space-20);
+  text-align: left;
+}
+
+.cta-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.cta-headline {
+  font-size: var(--text-2xl);
+  font-family: var(--font-serif);
+  max-width: 28ch;
+}

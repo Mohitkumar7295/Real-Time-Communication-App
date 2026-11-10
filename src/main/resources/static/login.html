@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sign in to MeetApp using your email and secure two-step one-time verification code.">
+  <title>Log in — MeetApp</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-brand" aria-label="MeetApp Home">MeetApp</a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <div class="nav-actions">
+          <span class="text-sm text-muted">New to MeetApp?</span>
+          <a href="signup.html" class="btn btn-secondary">Create account</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="auth-page">
+    <div class="container auth-single-column">
+      <div class="auth-card">
+        <!-- ================================================================
+             STEP 1: Email and Password Submission
+             ================================================================ -->
+        <div id="login-step-1" class="auth-step">
+          <div class="auth-card-header">
+            <h1 class="auth-card-title">Log in</h1>
+            <p class="auth-card-subtitle">Enter your credentials to receive a sign-in verification code.</p>
+          </div>
+
+          <!-- Alert for Step 1 -->
+          <div id="login-alert" class="alert-banner" role="alert" aria-live="polite"></div>
+
+          <form id="login-form" novalidate>
+            <!-- Email -->
+            <div class="form-group">
+              <label for="login-email" class="form-label">Email address</label>
+              <input
+                type="email"
+                id="login-email"
+                name="email"
+                class="form-input"
+                autocomplete="username"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+                placeholder="aarav@example.com"
+                aria-describedby="login-email-error"
+              >
+              <span id="login-email-error" class="field-error" aria-live="polite"></span>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="login-password" class="form-label">Password</label>
+              <div class="password-wrapper">
+                <input
+                  type="password"
+                  id="login-password"
+                  name="password"
+                  class="form-input"
+                  autocomplete="current-password"
+                  required
+                  aria-describedby="login-password-error"
+                >
+                <button
+                  type="button"
+                  class="password-toggle-btn"
+                  data-target="login-password"
+                  aria-pressed="false"
+                  aria-label="Show password"
+                >
+                  <svg class="icon-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg class="icon-hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                    <line x1="2" x2="22" y1="2" y2="22"/>
+                  </svg>
+                </button>
+              </div>
+              <span id="login-password-error" class="field-error" aria-live="polite"></span>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="login-submit" class="btn btn-primary btn-block">Continue with email</button>
+          </form>
+
+          <div class="auth-card-footer">
+            Don't have an account? <a href="signup.html">Create one now</a>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             STEP 2: 6-Digit Email OTP Verification
+             ================================================================ -->
+        <div id="login-step-2" class="auth-step" hidden>
+          <div class="auth-card-header">
+            <h1 class="auth-card-title">Check your email</h1>
+            <p class="auth-card-subtitle">
+              We sent a 6-digit verification code to <strong id="otp-target-email">your email</strong>.
+            </p>
+          </div>
+
+          <!-- Alert for Step 2 -->
+          <div id="otp-alert" class="alert-banner" role="alert" aria-live="polite"></div>
+
+          <form id="otp-form" novalidate>
+            <div class="otp-container">
+              <fieldset style="border: none; padding: 0; margin: 0;">
+                <legend class="form-label" style="margin-bottom: 8px;">Enter 6-digit code</legend>
+                <div class="otp-inputs" role="group" aria-label="Six digit verification code inputs">
+                  <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" aria-label="First digit" required>
+                  <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Second digit" required>
+                  <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Third digit" required>
+                  <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Fourth digit" required>
+                  <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Fifth digit" required>
+                  <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Sixth digit" required>
+                </div>
+              </fieldset>
+
+              <button type="submit" id="otp-submit" class="btn btn-primary btn-block">Verify and sign in</button>
+
+              <div class="otp-meta">
+                <span class="text-xs text-muted">The code is valid for 5 minutes.</span>
+                <div>
+                  <span class="text-xs text-muted">Didn't receive it?</span>
+                  <button type="button" id="resend-otp-btn" class="resend-btn" disabled>
+                    Resend code<span id="resend-countdown"> (60s)</span>
+                  </button>
+                </div>
+                <a href="#" id="back-to-step1" class="otp-back-link">&larr; Use a different account</a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-meta">
+          <strong>MeetApp</strong> &mdash; Built as part of the CodeAlpha internship.
+        </div>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="signup.html">Create account</a></li>
+          <li><a href="#" rel="noopener">GitHub</a></li>
+          <li><span>&copy; 2026 MeetApp</span></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

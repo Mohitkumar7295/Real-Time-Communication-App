@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MeetApp Dashboard — Manage your private meeting rooms.">
+  <title>Dashboard — MeetApp</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <style>
+    .dashboard-container {
+      max-width: 640px;
+      margin-inline: auto;
+      padding-block: var(--space-16);
+    }
+    .dashboard-card {
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-8);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+    .user-info-box {
+      background-color: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-brand" aria-label="MeetApp Home">MeetApp</a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <div class="nav-actions">
+          <button type="button" id="logout-btn" class="btn btn-secondary">Log out</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container dashboard-container">
+      <div class="dashboard-card">
+        <div>
+          <h1 style="font-size: var(--text-2xl); margin-bottom: 8px;">
+            Welcome, <span id="user-welcome-name">User</span>
+          </h1>
+          <p class="text-muted">You are securely signed in with two-step verification.</p>
+        </div>
+
+        <div class="user-info-box">
+          <span class="text-xs text-muted">Account Email</span>
+          <strong id="user-email" class="text-sm">user@example.com</strong>
+        </div>
+
+        <p class="text-sm text-muted">
+          This dashboard placeholder verifies your end-to-end authentication and token storage flow. Full room creation and video collaboration actions will be wired up in Phase 4.
+        </p>
+
+        <div style="display: flex; gap: var(--space-4);">
+          <a href="index.html" class="btn btn-secondary">Back to home</a>
+          <button type="button" id="start-meeting-placeholder" class="btn btn-primary">Start a meeting</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-meta">
+          <strong>MeetApp</strong> &mdash; Built as part of the CodeAlpha internship.
+        </div>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#" rel="noopener">GitHub</a></li>
+          <li><span>&copy; 2026 MeetApp</span></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

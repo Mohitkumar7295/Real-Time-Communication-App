@@ -19,7 +19,7 @@ erDiagram
     rooms ||--o{ messages : "receives"
 
     users { BIGINT id PK, VARCHAR email UK, VARCHAR name, VARCHAR password_hash, TIMESTAMPTZ created_at }
-    otp_challenges { VARCHAR id PK, BIGINT user_id FK, VARCHAR otp_hash, TIMESTAMPTZ expires_at, INT attempts, BOOLEAN consumed, TIMESTAMPTZ created_at, TIMESTAMPTZ last_sent_at }
+    otp_challenges { VARCHAR id PK, BIGINT user_id FK, VARCHAR otp_hash, TIMESTAMPTZ expires_at, INT attempts, INT resend_count, BOOLEAN consumed, TIMESTAMPTZ created_at, TIMESTAMPTZ last_sent_at }
     rooms { BIGINT id PK, VARCHAR room_code UK, BIGINT host_id FK, BOOLEAN is_active, TIMESTAMPTZ created_at, TIMESTAMPTZ ended_at }
     room_participants { BIGINT id PK, BIGINT room_id FK, BIGINT user_id FK, TIMESTAMPTZ joined_at, TIMESTAMPTZ left_at }
     files { BIGINT id PK, BIGINT room_id FK, BIGINT uploader_id FK, VARCHAR original_name, VARCHAR stored_name UK, VARCHAR content_type, BIGINT size_bytes, TIMESTAMPTZ uploaded_at }
@@ -46,6 +46,7 @@ All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_c
 | `otp_hash` | `VARCHAR(255)` | No | - | HMAC-SHA256 hash |
 | `expires_at` | `TIMESTAMPTZ` | No | - | 5-min expiry timestamp |
 | `attempts` | `INT` | No | `DEFAULT 0, CHECK (attempts <= 5)` | Failed attempt counter |
+| `resend_count`| `INT` | No | `DEFAULT 0, CHECK (resend_count BETWEEN 0 AND 3)` | Resend limiter (max 3) |
 | `consumed` | `BOOLEAN` | No | `DEFAULT FALSE` | Single-use flag |
 | `created_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Creation time |
 | `last_sent_at`| `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Cooldown tracker (60s) |
@@ -78,7 +79,7 @@ All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_c
 | `original_name`| `VARCHAR(255)` | No | - | Sanitized name |
 | `stored_name` | `VARCHAR(255)` | No | `UNIQUE` | UUID disk name |
 | `content_type` | `VARCHAR(100)` | No | - | MIME type |
-| `size_bytes` | `BIGINT` | No | `CHECK (size_bytes > 0 AND size_bytes <= 10485760)` | Max 10 MB |
+| `size_bytes` | `BIGINT` | No | `CHECK (size_bytes > 0)` | Positive file size (limit enforced in code) |
 | `uploaded_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Upload time |
 
 ### 3.6 `messages` Table (FR-22)
@@ -93,17 +94,23 @@ All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_c
 ## 4. Constraints & Indexes
 - **Foreign Keys:** `rooms.host_id -> users(id)` (`RESTRICT`); all others cascade on parent user/room delete.
 - **Indexes:**
-  - `idx_users_email` on `users(email)`
   - `idx_otp_user_expires` on `otp_challenges(user_id, expires_at)`
-  - `idx_rooms_code` on `rooms(room_code)`
   - `idx_participants_active` on `room_participants(room_id, user_id)` WHERE `left_at IS NULL`
   - `idx_files_room` on `files(room_id)`
   - `idx_messages_room_sent` on `messages(room_id, sent_at DESC)`
+  *(Note: `users.email` and `rooms.room_code` are indexed automatically by their `UNIQUE` constraints).*
 
 ## 5. Flyway Migration Plan
-- Sequential migrations (`V1`..`V7`) executed automatically on startup (`ddl-auto=validate`).
-- Temporary baseline check: `V1__baseline_check.sql` provisions `flyway_schema_history` during initial bootstrap.
-- Replace or remove when the real versioned schema migrations (`V1` to `V7`) are applied. Never edit an applied migration.
+- Sequential migrations (`V1`..`V9`) executed automatically on startup (`ddl-auto=validate`):
+  - `V1__baseline_check.sql`: Bootstrap baseline check.
+  - `V2__create_users.sql`: Creates `users` table and check constraints.
+  - `V3__create_rooms.sql`: Creates `rooms` table with foreign key to `users`.
+  - `V4__create_room_participants.sql`: Creates `room_participants` table with cascading foreign keys.
+  - `V5__create_files.sql`: Creates `files` table with `size_bytes > 0` constraint.
+  - `V6__create_messages.sql`: Creates `messages` table with non-empty text check.
+  - `V7__create_otp_challenges.sql`: Creates `otp_challenges` with attempts and resend count limits.
+  - `V8__create_indexes.sql`: Creates performance indexes supporting key queries.
+  - `V9__enable_row_level_security.sql`: Enables RLS on all 6 application tables without public policies.
 
 ## 6. Key Application Queries
 ```sql

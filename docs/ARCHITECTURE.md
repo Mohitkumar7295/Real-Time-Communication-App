@@ -168,15 +168,15 @@ meetapp/
     │   │   │   ├── EmailService.java           # Interface defining sendOtpEmail()
     │   │   │   └── SmtpEmailService.java       # JavaMailSender implementation with dev-profile console logging
     │   │   ├── user/                           # User entity and profile management
-    │   │   │   ├── User.java                   # JPA entity mapping the users table (id, email, password_hash, full_name)
+    │   │   │   ├── User.java                   # JPA entity mapping the users table (id, name, email, password_hash, created_at)
     │   │   │   ├── UserRepository.java         # Spring Data repository for user lookups by email
     │   │   │   ├── UserService.java            # User retrieval and profile query service
     │   │   │   ├── UserController.java         # Endpoint for /api/users/me returning authenticated user details
     │   │   │   └── dto/
     │   │   │       └── UserResponse.java       # User profile DTO excluding sensitive password hashes
     │   │   ├── room/                           # Meeting room lifecycle, memberships, and capacity limits (FR-4..7)
-    │   │   │   ├── Room.java                   # JPA entity mapping rooms table (id, room_code, host_user_id, is_active)
-    │   │   │   ├── RoomParticipant.java        # JPA entity mapping room_participants junction (user_id, room_id, joined_at, left_at)
+    │   │   │   ├── Room.java                   # JPA entity mapping rooms table (id, room_code, host_id, is_active, created_at, ended_at)
+    │   │   │   ├── RoomParticipant.java        # JPA entity mapping room_participants junction (id, room_id, user_id, joined_at, left_at)
     │   │   │   ├── RoomRepository.java         # Spring Data queries for active rooms by code
     │   │   │   ├── RoomParticipantRepository.java # Queries for active room membership and count checks
     │   │   │   ├── RoomService.java            # Logic for creating rooms, verifying capacity (<5), leaving, and ending meetings
@@ -217,7 +217,7 @@ meetapp/
     │   │   ├── file/                           # File sharing and download management (FR-15..17)
     │   │   │   ├── FileController.java         # REST endpoints for /api/files/upload/{code}, download/{id}, and room file list
     │   │   │   ├── FileService.java            # Business logic for file validation, storage, metadata persistence, and downloads
-    │   │   │   ├── FileMeta.java               # JPA entity mapping files table (id, room_id, uploader_id, filename, file_size)
+    │   │   │   ├── FileMeta.java               # JPA entity mapping files table (id, room_id, uploader_id, original_name, stored_name, content_type, size_bytes, uploaded_at)
     │   │   │   ├── FileMetaRepository.java     # Spring Data repository querying files uploaded to an active room
     │   │   │   ├── FileValidator.java          # Validates file size (<=10MB), MIME types, and blocks executable extensions
     │   │   │   ├── storage/
@@ -232,13 +232,15 @@ meetapp/
     │       ├── application-dev.yml             # Local dev profile (Postgres localhost, relaxed logging, debug mode)
     │       ├── application-prod.yml            # Production profile (PostgreSQL with sslmode=require, strict CORS)
     │       ├── db/migration/                   # Flyway versioned SQL migration scripts
-    │       │   ├── V1__users.sql               # Creates users table and email unique index
-    │       │   ├── V2__rooms.sql               # Creates rooms table and room_code unique index
-    │       │   ├── V3__room_participants.sql   # Creates room_participants junction table
-    │       │   ├── V4__files.sql               # Creates files metadata table with foreign keys
-    │       │   ├── V5__messages.sql            # Creates messages table with room and user foreign keys
-    │       │   ├── V6__indexes.sql             # Creates performance indexes
-    │       │   └── V7__otp_challenges.sql      # Creates otp_challenges table and index
+    │       │   ├── V1__baseline_check.sql          # Bootstrap baseline check
+│       │   ├── V2__create_users.sql            # Creates users table and email unique check
+│       │   ├── V3__create_rooms.sql            # Creates rooms table with host foreign key
+│       │   ├── V4__create_room_participants.sql # Creates room_participants junction table
+│       │   ├── V5__create_files.sql            # Creates files metadata table
+│       │   ├── V6__create_messages.sql         # Creates messages table with content check
+│       │   ├── V7__create_otp_challenges.sql   # Creates otp_challenges table with resend_count
+│       │   ├── V8__create_indexes.sql          # Creates performance indexes
+│       │   └── V9__enable_row_level_security.sql # Enables Row Level Security on all application tables
     │       └── static/                         # Frontend client files (HTML5, CSS3, modular JavaScript)
     │           ├── index.html                  # Landing page introducing MeetApp features and navigation
     │           ├── login.html                  # User login page with email/password form

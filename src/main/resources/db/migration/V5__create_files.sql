@@ -1,0 +1,10 @@
+CREATE TABLE files (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    room_id BIGINT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    uploader_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL UNIQUE,
+    content_type VARCHAR(100) NOT NULL,
+    size_bytes BIGINT NOT NULL CHECK (size_bytes > 0),
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

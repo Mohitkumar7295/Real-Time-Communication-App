@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @Component
 public class DatabaseConnectionValidator implements ApplicationRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(DatabaseConnectionValidator.java);
+    private static final Logger log = LoggerFactory.getLogger(DatabaseConnectionValidator.class);
     private static final Pattern JDBC_HOST_PATTERN = Pattern.compile("jdbc:postgresql://([^:/]+)");
 
     private final DataSource dataSource;

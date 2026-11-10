@@ -19,3 +19,11 @@ management:
     web:
       exposure:
         include: health
+
+app:
+  allowed-origin: http://localhost:8080
+  max-file-size-mb: 10
+  max-room-participants: 5
+  upload-dir: target/test-uploads
+  otp-expiry-minutes: 5
+  stun-urls: stun:stun.l.google.com:19302

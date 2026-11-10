@@ -27,3 +27,14 @@ management:
   endpoint:
     health:
       show-details: never
+
+app:
+  allowed-origin: ${APP_ALLOWED_ORIGIN:http://localhost:8080}
+  max-file-size-mb: ${MAX_FILE_SIZE_MB:10}
+  max-room-participants: ${MAX_ROOM_PARTICIPANTS:5}
+  upload-dir: ${UPLOAD_DIR:uploads}
+  otp-expiry-minutes: ${OTP_EXPIRY_MINUTES:5}
+  stun-urls: ${STUN_URLS:stun:stun.l.google.com:19302}
+  turn-url: ${TURN_URL:}
+  turn-username: ${TURN_USERNAME:}
+  turn-credential: ${TURN_CREDENTIAL:}

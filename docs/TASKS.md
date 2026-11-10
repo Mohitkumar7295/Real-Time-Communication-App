@@ -11,14 +11,14 @@
 | Ph | Tasks | Done | Ph | Tasks | Done |
 | :-: | :-: | :-: | :-: | :-: | :-: |
 | 0 Setup | 1 | 0 | 8 Screen | 1 | 0 |
-| 1 Base | 1 | 0 | 9 Chat | 1 | 0 |
+| 1 Base | 1 | 1 | 9 Chat | 1 | 0 |
 | 2 DB | 1 | 0 | 10 Files | 1 | 0 |
 | 3 Auth | 3 | 0 | 11 Board | 1 | 0 |
 | 4 Rooms | 1 | 0 | 12 Sec | 1 | 0 |
 | 5 Front | 1 | 0 | 13 UX | 1 | 0 |
 | 6 Signal | 1 | 0 | 14 Deploy | 1 | 0 |
 | 7 Video | 1 | 0 | 15 Submit | 1 | 0 |
-| **Tot** | **18** | **0** | | | |
+| **Tot** | **18** | **1** | | | |
 
 ## Dependencies & DoD
 - **Dependencies:** 1-2 need 0; 3 needs 1-2; 4 needs 3; 5 needs 3-4; 6 needs 4; 7 needs 4,6; 8-11 need 6-7; 12-15 need 0-11.
@@ -52,7 +52,7 @@
   - Steps: Add Spring Web, Security, Mail, Data JPA, WebSocket, Flyway, Postgres driver to pom.xml; create profiles and docker-compose.
   - Done when: App compiles and `/actuator/health` is UP. Test: `mvn clean package`.
 
-- [ ] **T-1.1 Foundation: Common Config & CORS** (NFR-6)
+- [x] **T-1.1 Foundation: Common Config & CORS** (NFR-6)
   - Files: `AppProperties.java`, `CorsConfig.java`, `common/exception/*`
   - Steps: Implement AppProperties, ApiError, GlobalExceptionHandler, and CorsConfig.
   - Done when: Errors return uniform JSON with status and path. Test: `mvn clean test`.

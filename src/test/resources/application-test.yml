@@ -7,9 +7,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: false
     locations: classpath:db/migration
@@ -29,3 +26,5 @@ app:
   stun-urls: stun:stun.l.google.com:19302
   jwt-secret: test-dummy-jwt-secret-minimum-32-chars-long-abcdef
   jwt-expiry-minutes: 1440
+  email-provider: log
+  otp-pepper: default-otp-pepper-secret-value-32chars

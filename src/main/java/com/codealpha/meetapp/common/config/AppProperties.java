@@ -51,6 +51,14 @@ public class AppProperties {
     @Positive(message = "app.jwt-expiry-minutes must be positive")
     private int jwtExpiryMinutes = 1440;
 
+    private String otpPepper = "default-otp-pepper-secret-value-32chars";
+
+    private String emailProvider = "log";
+
+    private String resendApiKey = "";
+
+    private String mailFrom = "onboarding@resend.dev";
+
     @PostConstruct
     public void validateOrigin() {
         if (allowedOrigin == null || allowedOrigin.isBlank()) {
@@ -170,6 +178,38 @@ public class AppProperties {
         this.jwtExpiryMinutes = jwtExpiryMinutes;
     }
 
+    public String getOtpPepper() {
+        return otpPepper;
+    }
+
+    public void setOtpPepper(String otpPepper) {
+        this.otpPepper = otpPepper;
+    }
+
+    public String getEmailProvider() {
+        return emailProvider;
+    }
+
+    public void setEmailProvider(String emailProvider) {
+        this.emailProvider = emailProvider;
+    }
+
+    public String getResendApiKey() {
+        return resendApiKey;
+    }
+
+    public void setResendApiKey(String resendApiKey) {
+        this.resendApiKey = resendApiKey;
+    }
+
+    public String getMailFrom() {
+        return mailFrom;
+    }
+
+    public void setMailFrom(String mailFrom) {
+        this.mailFrom = mailFrom;
+    }
+
     @Override
     public String toString() {
         return "AppProperties{" +
@@ -184,6 +224,10 @@ public class AppProperties {
                 ", turnCredential=" + (turnCredential != null && !turnCredential.isBlank() ? "'****'" : "null") +
                 ", jwtSecret=" + (jwtSecret != null && !jwtSecret.isBlank() ? "'****'" : "null") +
                 ", jwtExpiryMinutes=" + jwtExpiryMinutes +
+                ", otpPepper=" + (otpPepper != null && !otpPepper.isBlank() ? "'****'" : "null") +
+                ", emailProvider='" + emailProvider + '\'' +
+                ", resendApiKey=" + (resendApiKey != null && !resendApiKey.isBlank() ? "'****'" : "null") +
+                ", mailFrom='" + mailFrom + '\'' +
                 '}';
     }
 }

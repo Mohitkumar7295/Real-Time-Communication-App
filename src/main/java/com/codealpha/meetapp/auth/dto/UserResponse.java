@@ -1,0 +1,7 @@
+package com.codealpha.meetapp.auth.dto;
+
+public record UserResponse(
+        Long id,
+        String name,
+        String email
+) {}

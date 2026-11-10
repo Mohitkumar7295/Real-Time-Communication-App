@@ -14,6 +14,9 @@ public interface OtpChallengeRepository extends JpaRepository<OtpChallenge, Stri
 
     Optional<OtpChallenge> findByIdAndConsumedFalseAndExpiresAtAfter(String id, Instant now);
 
+    @Query("SELECT o FROM OtpChallenge o JOIN FETCH o.user WHERE o.id = :id")
+    Optional<OtpChallenge> findByIdWithUser(@Param("id") String id);
+
     @Modifying
     @Query("DELETE FROM OtpChallenge o WHERE o.expiresAt < :cutoff")
     int deleteExpiredOlderThan(@Param("cutoff") Instant cutoff);

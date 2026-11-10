@@ -57,9 +57,9 @@
   - Steps: Implement AppProperties, ApiError, GlobalExceptionHandler, and CorsConfig.
   - Done when: Errors return uniform JSON with status and path. Test: `mvn clean test`.
 
-- [ ] **T-2.1 Database: Migrations & Repositories** (FR-1, FR-3, FR-4, FR-5, FR-15, FR-22)
-  - Files: `V1..V7.sql`, `User*.java`, `OtpChallenge*.java`, `Room*.java`, `FileMeta*.java`
-  - Steps: Create Flyway migrations V1 to V7; create JPA entities and Spring Data repositories.
+- [x] **T-2.1 Database: Migrations & Repositories** (FR-1, FR-3, FR-4, FR-5, FR-15, FR-22)
+  - Files: `V1..V9.sql`, `User*.java`, `OtpChallenge*.java`, `Room*.java`, `FileMeta*.java`
+  - Steps: Create Flyway migrations V1 to V9; create JPA entities and Spring Data repositories.
   - Done when: Migrations apply cleanly and validation succeeds. Test: Start app against PostgreSQL; verify all 6 tables exist.
 
 - [x] **T-3.1 Auth: JWT & Security Chain** (FR-3, FR-25)
@@ -67,14 +67,14 @@
   - Steps: Implement JwtService for HS256, CustomUserDetailsService, JwtAuthFilter, and stateless SecurityConfig.
   - Done when: Protected endpoint rejects unauthenticated calls with 401. Test: `mvn test -Dtest=AuthServiceTest`.
 
-- [ ] **T-3.2 Auth: User Registration & Step 1 Login** (FR-1, FR-2, FR-3)
+- [x] **T-3.2 Auth: User Registration & Step 1 Login** (FR-1, FR-2, FR-3)
   - Files: `AuthController.java`, `AuthService.java`, `RegisterRequest.java`, `LoginRequest.java`, `LoginInitResponse.java`
   - Steps: Validate email/password format; hash password via BCrypt; verify credentials and initiate OTP challenge; return `{otpRequired: true, challengeId}`.
   - Done when: Registration creates user, login triggers OTP challenge, bad password returns 401. Test: MockMvc tests for register, login, duplicate email.
 
-- [ ] **T-3.3 Auth: Email OTP Service & Step 2 Verification** (FR-3A, FR-3B)
-  - Files: `OtpService.java`, `OtpGenerator.java`, `EmailService.java`, `SmtpEmailService.java`, `AuthController.java`
-  - Steps: Generate 6-digit SecureRandom OTP; hash at rest in `otp_challenges`; send via EmailService (console log in dev); implement `POST /verify-otp` and `POST /resend-otp` with 60s cooldown and 5-attempt limit; issue JWT upon success.
+- [x] **T-3.3 Auth: Email OTP Service & Step 2 Verification** (FR-3A, FR-3B)
+  - Files: `OtpService.java`, `IdGenerator.java`, `EmailService.java`, `ResendEmailService.java`, `LogEmailService.java`, `AuthController.java`, `UserController.java`, `RateLimiter.java`, `OtpChallengeCleaner.java`
+  - Steps: Generate 6-digit SecureRandom OTP; hash at rest in `otp_challenges`; send via EmailService (console log in dev, Resend in prod); implement `POST /verify-otp` and `POST /resend-otp` with 60s cooldown and 5-attempt limit; issue JWT upon success.
   - Done when: Correct OTP yields JWT; wrong/expired OTP returns 401; 5 failed attempts locks challenge (429). Test: Unit test verifying OTP generation, hashing, attempt counter, and lockout.
 
 - [ ] **T-4.1 Rooms: Lifecycle & Capacity Service** (FR-4, FR-5, FR-6, FR-7)

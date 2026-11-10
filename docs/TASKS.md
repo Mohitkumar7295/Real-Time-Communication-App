@@ -23,6 +23,7 @@
 ## Dependencies & DoD
 - **Dependencies:** 1-2 need 0; 3 needs 1-2; 4 needs 3; 5 needs 3-4; 6 needs 4; 7 needs 4,6; 8-11 need 6-7; 12-15 need 0-11.
 - **DoD:** Java 17/Spring Boot 3; `mvn clean test` passes; manual tests pass; security met; checked off in TASKS.md.
+- **Test Database Note:** When migrations use PostgreSQL-specific SQL, switch tests from H2 to Testcontainers or a local PostgreSQL.
 
 ## Environment Variables Reference
 | Variable | Req | Description |

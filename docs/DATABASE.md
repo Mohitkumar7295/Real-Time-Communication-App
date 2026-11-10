@@ -27,110 +27,85 @@ erDiagram
 ```
 
 ## 3. Table Definitions
-All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_challenges` which uses a secure UUID string token `id`.
+All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_challenges` which uses a secure UUID `id`.
 
 ### 3.1 `users` Table (FR-1, FR-2)
-| Column | Type | Nullable | Default | Constraints | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | No | `IDENTITY` | `PK` | User ID |
-| `name` | `VARCHAR(100)` | No | - | `CHECK (length(name) >= 2)` | Display name |
-| `email` | `VARCHAR(255)` | No | - | `UNIQUE, CHECK (email = lower(email))` | Lowercase email |
-| `password_hash`| `VARCHAR(255)` | No | - | - | BCrypt hash |
-| `created_at` | `TIMESTAMPTZ` | No | `NOW()` | - | Creation time |
+| Column | Type | Nullable | Constraints | Notes |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `BIGINT` | No | `IDENTITY, PK` | User ID |
+| `name` | `VARCHAR(100)` | No | `CHECK (length(name) >= 2)` | Display name |
+| `email` | `VARCHAR(255)` | No | `UNIQUE, CHECK (email = lower(email))` | Lowercase email |
+| `password_hash`| `VARCHAR(255)` | No | - | BCrypt hash |
+| `created_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Creation time |
 
 ### 3.2 `otp_challenges` Table (FR-3, FR-3A, FR-3B)
-| Column | Type | Nullable | Default | Constraints | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | `VARCHAR(64)` | No | - | `PK` | Random challenge UUID |
-| `user_id` | `BIGINT` | No | - | `FK -> users(id)` | Target user |
-| `otp_hash` | `VARCHAR(255)` | No | - | - | Hash of 6-digit OTP |
-| `expires_at` | `TIMESTAMPTZ` | No | - | - | 5-min expiry timestamp |
-| `attempts` | `INT` | No | `0` | `CHECK (attempts <= 5)` | Failed attempt counter |
-| `consumed` | `BOOLEAN` | No | `FALSE` | - | Single-use flag |
-| `created_at` | `TIMESTAMPTZ` | No | `NOW()` | - | Creation time |
-| `last_sent_at`| `TIMESTAMPTZ` | No | `NOW()` | - | Cooldown tracker (60s) |
+| Column | Type | Nullable | Constraints | Notes |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `VARCHAR(64)` | No | `PK` | Random challenge UUID |
+| `user_id` | `BIGINT` | No | `FK -> users(id)` | Target user |
+| `otp_hash` | `VARCHAR(255)` | No | - | HMAC-SHA256 hash |
+| `expires_at` | `TIMESTAMPTZ` | No | - | 5-min expiry timestamp |
+| `attempts` | `INT` | No | `DEFAULT 0, CHECK (attempts <= 5)` | Failed attempt counter |
+| `consumed` | `BOOLEAN` | No | `DEFAULT FALSE` | Single-use flag |
+| `created_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Creation time |
+| `last_sent_at`| `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Cooldown tracker (60s) |
 
 ### 3.3 `rooms` Table (FR-4, FR-5, FR-6)
-| Column | Type | Nullable | Default | Constraints | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | No | `IDENTITY` | `PK` | Room ID |
-| `room_code` | `VARCHAR(32)` | No | - | `UNIQUE, CHECK (length(room_code) >= 6)` | Room code |
-| `host_id` | `BIGINT` | No | - | `FK -> users(id)` | Room host |
-| `is_active` | `BOOLEAN` | No | `TRUE` | - | Open flag |
-| `created_at` | `TIMESTAMPTZ` | No | `NOW()` | - | Start time |
-| `ended_at` | `TIMESTAMPTZ` | Yes | `NULL` | - | Close time |
+| Column | Type | Nullable | Constraints | Notes |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `BIGINT` | No | `IDENTITY, PK` | Room ID |
+| `room_code` | `VARCHAR(32)` | No | `UNIQUE, CHECK (length(room_code) >= 6)` | Room code |
+| `host_id` | `BIGINT` | No | `FK -> users(id)` | Room host |
+| `is_active` | `BOOLEAN` | No | `DEFAULT TRUE` | Open flag |
+| `created_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Start time |
+| `ended_at` | `TIMESTAMPTZ` | Yes | - | Close time |
 
 ### 3.4 `room_participants` Table (FR-5, FR-7)
-| Column | Type | Nullable | Default | Constraints | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | No | `IDENTITY` | `PK` | Record ID |
-| `room_id` | `BIGINT` | No | - | `FK -> rooms(id)` | Room reference |
-| `user_id` | `BIGINT` | No | - | `FK -> users(id)` | User reference |
-| `joined_at` | `TIMESTAMPTZ` | No | `NOW()` | - | Join time |
-| `left_at` | `TIMESTAMPTZ` | Yes | `NULL` | - | Exit time (`NULL`=active) |
+| Column | Type | Nullable | Constraints | Notes |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `BIGINT` | No | `IDENTITY, PK` | Record ID |
+| `room_id` | `BIGINT` | No | `FK -> rooms(id)` | Room reference |
+| `user_id` | `BIGINT` | No | `FK -> users(id)` | User reference |
+| `joined_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Join time |
+| `left_at` | `TIMESTAMPTZ` | Yes | - | Exit time (`NULL`=active) |
 
 ### 3.5 `files` Table (FR-15, FR-16, FR-17)
-| Column | Type | Nullable | Default | Constraints | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | No | `IDENTITY` | `PK` | File ID |
-| `room_id` | `BIGINT` | No | - | `FK -> rooms(id)` | Target room |
-| `uploader_id` | `BIGINT` | No | - | `FK -> users(id)` | Uploader ID |
-| `original_name`| `VARCHAR(255)` | No | - | - | Sanitized name |
-| `stored_name` | `VARCHAR(255)` | No | - | `UNIQUE` | UUID disk name |
-| `content_type` | `VARCHAR(100)` | No | - | - | MIME type |
-| `size_bytes` | `BIGINT` | No | - | `CHECK (size_bytes > 0 AND size_bytes <= 10485760)` | Max 10 MB |
-| `uploaded_at` | `TIMESTAMPTZ` | No | `NOW()` | - | Upload time |
+| Column | Type | Nullable | Constraints | Notes |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `BIGINT` | No | `IDENTITY, PK` | File ID |
+| `room_id` | `BIGINT` | No | `FK -> rooms(id)` | Target room |
+| `uploader_id` | `BIGINT` | No | `FK -> users(id)` | Uploader ID |
+| `original_name`| `VARCHAR(255)` | No | - | Sanitized name |
+| `stored_name` | `VARCHAR(255)` | No | `UNIQUE` | UUID disk name |
+| `content_type` | `VARCHAR(100)` | No | - | MIME type |
+| `size_bytes` | `BIGINT` | No | `CHECK (size_bytes > 0 AND size_bytes <= 10485760)` | Max 10 MB |
+| `uploaded_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Upload time |
 
 ### 3.6 `messages` Table (FR-22)
-| Column | Type | Nullable | Default | Constraints | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id` | `BIGINT` | No | `IDENTITY` | `PK` | Message ID |
-| `room_id` | `BIGINT` | No | - | `FK -> rooms(id)` | Room ID |
-| `sender_id` | `BIGINT` | No | - | `FK -> users(id)` | Sender ID |
-| `content` | `TEXT` | No | - | `CHECK (length(trim(content)) > 0)` | Chat text |
-| `sent_at` | `TIMESTAMPTZ` | No | `NOW()` | - | Sent time |
+| Column | Type | Nullable | Constraints | Notes |
+| :--- | :--- | :---: | :--- | :--- |
+| `id` | `BIGINT` | No | `IDENTITY, PK` | Message ID |
+| `room_id` | `BIGINT` | No | `FK -> rooms(id)` | Room ID |
+| `sender_id` | `BIGINT` | No | `FK -> users(id)` | Sender ID |
+| `content` | `TEXT` | No | `CHECK (length(trim(content)) > 0)` | Chat text |
+| `sent_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Sent time |
 
-## 4. Constraints & Integrity Rules
+## 4. Constraints & Indexes
 - **Foreign Keys:** `rooms.host_id -> users(id)` (`RESTRICT`); all others cascade on parent user/room delete.
-- **Integrity:** `email` unique and lowercase; `size_bytes` $\le 10$MB; OTP strictly hashed at rest.
+- **Indexes:**
+  - `idx_users_email` on `users(email)`
+  - `idx_otp_user_expires` on `otp_challenges(user_id, expires_at)`
+  - `idx_rooms_code` on `rooms(room_code)`
+  - `idx_participants_active` on `room_participants(room_id, user_id)` WHERE `left_at IS NULL`
+  - `idx_files_room` on `files(room_id)`
+  - `idx_messages_room_sent` on `messages(room_id, sent_at DESC)`
 
-## 5. Indexes
-| Index Name | Table | Columns | Purpose |
-| :--- | :--- | :--- | :--- |
-| `idx_users_email` | `users` | `email` | User lookup during login |
-| `idx_otp_user_expires` | `otp_challenges` | `user_id, expires_at` | Challenge lookup & expiry prune |
-| `idx_rooms_code` | `rooms` | `room_code` | Room lookup by code |
-| `idx_participants_active`| `room_participants` | `room_id, user_id` WHERE `left_at IS NULL` | Active 5-user capacity check |
-| `idx_files_room` | `files` | `room_id` | List files for room |
-| `idx_messages_room_sent` | `messages` | `room_id, sent_at DESC` | Ordered chat history |
+## 5. Flyway Migration Plan
+- Sequential migrations (`V1`..`V7`) executed automatically on startup (`ddl-auto=validate`).
+- Temporary baseline check: `V1__baseline_check.sql` provisions `flyway_schema_history` during initial bootstrap.
+- Replace or remove when the real versioned schema migrations (`V1` to `V7`) are applied. Never edit an applied migration.
 
-## 6. Flyway Migration Plan
-Sequential migrations (`V1`..`V7`) executed on startup:
-- `V1__create_users.sql`, `V2__create_rooms.sql`, `V3__create_room_participants.sql`, `V4__create_files.sql`, `V5__create_messages.sql`, `V6__create_indexes.sql`, `V7__create_otp_challenges.sql`.
-
-```sql
--- V1: users
-CREATE TABLE users (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(100) NOT NULL CHECK (length(name)>=2), email VARCHAR(255) NOT NULL UNIQUE CHECK (email=lower(email)), password_hash VARCHAR(255) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
--- V2: rooms
-CREATE TABLE rooms (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, room_code VARCHAR(32) NOT NULL UNIQUE CHECK (length(room_code)>=6), host_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT, is_active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), ended_at TIMESTAMPTZ);
--- V3: room_participants
-CREATE TABLE room_participants (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, room_id BIGINT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), left_at TIMESTAMPTZ);
--- V4: files
-CREATE TABLE files (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, room_id BIGINT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE, uploader_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, original_name VARCHAR(255) NOT NULL, stored_name VARCHAR(255) NOT NULL UNIQUE, content_type VARCHAR(100) NOT NULL, size_bytes BIGINT NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 10485760), uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
--- V5: messages
-CREATE TABLE messages (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, room_id BIGINT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE, sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, content TEXT NOT NULL CHECK (length(trim(content)) > 0), sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
--- V6: indexes
-CREATE INDEX idx_users_email ON users(email); CREATE INDEX idx_rooms_code ON rooms(room_code); CREATE INDEX idx_participants_active ON room_participants(room_id, user_id) WHERE left_at IS NULL; CREATE INDEX idx_files_room ON files(room_id); CREATE INDEX idx_messages_room_sent ON messages(room_id, sent_at DESC);
--- V7: otp_challenges
-CREATE TABLE otp_challenges (id VARCHAR(64) PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE, otp_hash VARCHAR(255) NOT NULL, expires_at TIMESTAMPTZ NOT NULL, attempts INT NOT NULL DEFAULT 0 CHECK (attempts <= 5), consumed BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
-CREATE INDEX idx_otp_user_expires ON otp_challenges(user_id, expires_at);
-```
-
-## 7. JPA Mapping Notes
-- Entities: `User`, `OtpChallenge`, `Room`, `RoomParticipant`, `FileMeta`, `ChatMessage`.
-- `@ManyToOne` associations use `FetchType.LAZY`. DTOs used exclusively. Hibernate `ddl-auto=validate`.
-
-## 8. Key Application Queries
+## 6. Key Application Queries
 ```sql
 SELECT id, name, email, password_hash FROM users WHERE email = :email;
 SELECT id, user_id, otp_hash, expires_at, attempts, consumed FROM otp_challenges WHERE id = :id AND consumed = FALSE AND expires_at > NOW();
@@ -140,7 +115,7 @@ UPDATE rooms SET is_active = FALSE, ended_at = NOW() WHERE room_code = :roomCode
 SELECT m.id, m.content, m.sent_at, u.name AS sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.room_id = :roomId ORDER BY m.sent_at ASC LIMIT 50;
 ```
 
-## 9. Data Lifecycle & Row-Level Security
+## 7. Data Lifecycle & Row-Level Security
 - **Active Call:** Real-time writes for participants, chat, and files.
 - **Disk File Deletion:** Deleting a file row triggers `LocalStorageService.deleteFile(stored_name)`.
 - **Database Defense (RLS):**
@@ -150,11 +125,23 @@ ALTER TABLE rooms ENABLE ROW LEVEL SECURITY; ALTER TABLE room_participants ENABL
 ALTER TABLE files ENABLE ROW LEVEL SECURITY; ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ```
 
-## 10. Development & Operations
-- `docker-compose.yml` provides Postgres 15 on port 5432 with Flyway auto-migration on startup.
-- Backup: `pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME --no-owner --clean > backup.sql`.
-- In dev profile, OTPs are logged to app console for testing without active SMTP.
+## 8. Connecting to Supabase (testing)
+MeetApp supports testing against Supabase PostgreSQL:
+- **Connection Mode:** Connect through the Supabase **Session Pooler** on port `5432` (`aws-1-ap-south-1.pooler.supabase.com:5432`). Do NOT use Transaction Pooler mode on port `6543`, which disrupts Flyway schema migrations and prepared statements.
+- **Username Format:** `postgres.<PROJECT-REF>` (e.g. `postgres.abcdefghijklmnopqrst`).
+- **Transport Encryption:** `sslmode=require` is strictly required in the JDBC URL.
+- **Password Reset:** If credentials fail, reset your password in the Supabase Dashboard under *Project Settings > Database > Database Password*.
+- **Isolation Notice:** Supabase is utilized for local development testing only. Production environments use a dedicated isolated database instance.
+- **Connection Pool Limits:** Free-tier connection caps are respected via HikariCP settings: `maximum-pool-size: 5`, `minimum-idle: 1`, `connection-timeout: 20000`.
 
-## 11. Open Questions
+### Troubleshooting Matrix
+| Error | Cause | Resolution |
+| :--- | :--- | :--- |
+| `Password authentication failed` | Wrong password or unescaped special characters | Reset password in Supabase Dashboard; URL-encode characters like `#` (`%23`) if passing in raw URI |
+| `Connection timeout` | Wrong host, blocked outbound port, or paused project | Verify host `*.pooler.supabase.com`, port `5432`, and ensure project is unpaused |
+| `SSL error / SSL handshake` | Missing SSL flag in JDBC connection URL | Ensure `?sslmode=require` is appended to `DB_URL` |
+| `No tables appearing` | Flyway not executed or pointing to different schema | Check `flyway_schema_history` in `public` schema; verify migrations executed on startup |
+
+## 9. Open Questions
 - *File Retention:* Purge files immediately on room end or keep for a grace period?
 - *OTP Pruning:* Schedule cron job to purge expired consumed challenges weekly?

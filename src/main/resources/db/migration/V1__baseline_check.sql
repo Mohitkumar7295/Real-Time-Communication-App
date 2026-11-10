@@ -1,0 +1,1 @@
+-- Baseline migration check for MeetApp Flyway initialization

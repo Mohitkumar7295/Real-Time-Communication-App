@@ -1,0 +1,11 @@
+logging:
+  level:
+    root: WARN
+    org.flywaydb: INFO
+    org.hibernate: ERROR
+    com.codealpha.meetapp: INFO
+
+server:
+  error:
+    include-stacktrace: never
+    include-message: never

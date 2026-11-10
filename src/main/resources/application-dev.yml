@@ -1,0 +1,13 @@
+logging:
+  level:
+    root: INFO
+    org.flywaydb: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    com.codealpha.meetapp: DEBUG
+
+server:
+  error:
+    include-stacktrace: never
+    include-message: always

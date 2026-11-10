@@ -12,5 +12,5 @@ export const CONFIG = {
 
   // Mock mode flag: when true, api.js intercepts requests and returns simulated responses.
   // Set to false when connecting to the live Spring Boot signaling backend.
-  MOCK: true
+  MOCK: false
 };

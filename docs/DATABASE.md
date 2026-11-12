@@ -85,23 +85,27 @@ All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_c
 ### 3.6 `messages` Table (FR-22)
 | Column | Type | Nullable | Constraints | Notes |
 | :--- | :--- | :---: | :--- | :--- |
-| `id` | `BIGINT` | No | `IDENTITY, PK` | Message ID |
-| `room_id` | `BIGINT` | No | `FK -> rooms(id)` | Room ID |
-| `sender_id` | `BIGINT` | No | `FK -> users(id)` | Sender ID |
-| `content` | `TEXT` | No | `CHECK (length(trim(content)) > 0)` | Chat text |
-| `sent_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Sent time |
+| `id` | `BIGINT` | No | `IDENTITY, PK` | Message ID (monotonically increasing) |
+| `room_id` | `BIGINT` | No | `FK -> rooms(id)` | Room ID (cascades on delete) |
+| `sender_id` | `BIGINT` | No | `FK -> users(id)` | Sender ID (cascades on delete) |
+| `content` | `TEXT` | No | `CHECK (length(trim(content)) > 0)` | Chat text (plaintext or AES-256-GCM Base64 ciphertext) |
+| `sent_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Server timestamp |
+
+*Note on Encryption at Rest:* When AES-256-GCM encryption is active, `content` stores the packed Base64 payload `[version:1 byte][iv:12 bytes][ciphertext + tag]`. Because the resulting string is non-empty and contains no whitespace padding, it inherently satisfies the existing `CHECK (length(trim(content)) > 0)` constraint without requiring schema modifications to applied migrations.
 
 ## 4. Constraints & Indexes
 - **Foreign Keys:** `rooms.host_id -> users(id)` (`RESTRICT`); all others cascade on parent user/room delete.
 - **Indexes:**
   - `idx_otp_user_expires` on `otp_challenges(user_id, expires_at)`
   - `idx_participants_active` on `room_participants(room_id, user_id)` WHERE `left_at IS NULL`
-  - `idx_files_room` on `files(room_id)`
-  - `idx_messages_room_sent` on `messages(room_id, sent_at DESC)`
-  *(Note: `users.email` and `rooms.room_code` are indexed automatically by their `UNIQUE` constraints).*
+  - `idx_files_room` on `files(room_id)` (Replaced by `idx_files_room_id` in `V11`)
+  - `idx_files_room_id` on `files(room_id, id DESC)` (Proposed in `V11` for cursor-based file list paging)
+  - `idx_messages_room_sent` on `messages(room_id, sent_at DESC)` (Dropped in `V10`)
+  - `idx_messages_room_id` on `messages(room_id, id DESC)` (Created in `V10` to optimize cursor-based history paging)
+  *(Note: `users.email`, `rooms.room_code`, and `files.stored_name` are indexed automatically by their `UNIQUE` constraints).*
 
 ## 5. Flyway Migration Plan
-- Sequential migrations (`V1`..`V9`) executed automatically on startup (`ddl-auto=validate`):
+- Sequential migrations (`V1`..`V11`) executed automatically on startup (`ddl-auto=validate`):
   - `V1__baseline_check.sql`: Bootstrap baseline check.
   - `V2__create_users.sql`: Creates `users` table and check constraints.
   - `V3__create_rooms.sql`: Creates `rooms` table with foreign key to `users`.
@@ -111,6 +115,8 @@ All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_c
   - `V7__create_otp_challenges.sql`: Creates `otp_challenges` with attempts and resend count limits.
   - `V8__create_indexes.sql`: Creates performance indexes supporting key queries.
   - `V9__enable_row_level_security.sql`: Enables RLS on all 6 application tables without public policies.
+  - `V10__create_chat_cursor_index.sql`: Creates composite index `idx_messages_room_id` on `messages(room_id, id DESC)` for zero-offset cursor pagination.
+  - `V11__create_files_cursor_index.sql`: Creates composite index `idx_files_room_id` on `files(room_id, id DESC)` for newest-first cursor pagination and drops redundant single-column `idx_files_room`.
 
 ## 6. Key Application Queries
 ```sql
@@ -119,7 +125,13 @@ SELECT id, user_id, otp_hash, expires_at, attempts, consumed FROM otp_challenges
 INSERT INTO rooms (room_code, host_id, is_active, created_at) VALUES (:roomCode, :hostId, TRUE, NOW()) RETURNING id;
 SELECT COUNT(*) FROM room_participants WHERE room_id = :roomId AND left_at IS NULL;
 UPDATE rooms SET is_active = FALSE, ended_at = NOW() WHERE room_code = :roomCode;
-SELECT m.id, m.content, m.sent_at, u.name AS sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.room_id = :roomId ORDER BY m.sent_at ASC LIMIT 50;
+-- Chat Cursor History Pagination (Oldest-First retrieved via reverse-order fetch)
+SELECT m.id, m.content, m.sent_at, u.id AS sender_id, u.name AS sender_name 
+FROM messages m 
+JOIN users u ON m.sender_id = u.id 
+WHERE m.room_id = :roomId AND (:beforeId IS NULL OR m.id < :beforeId) 
+ORDER BY m.id DESC 
+LIMIT :limit;
 ```
 
 ## 7. Data Lifecycle & Row-Level Security

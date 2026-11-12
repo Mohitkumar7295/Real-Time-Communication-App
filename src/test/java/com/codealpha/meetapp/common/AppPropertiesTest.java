@@ -1,4 +1,6 @@
-package com.codealpha.meetapp.common.config;
+package com.codealpha.meetapp.common;
+
+import com.codealpha.meetapp.common.config.AppProperties;
 
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;

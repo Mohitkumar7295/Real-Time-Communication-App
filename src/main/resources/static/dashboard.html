@@ -3,80 +3,219 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="MeetApp Dashboard — Manage your private meeting rooms.">
+  <meta name="description" content="MeetApp Collaboration Hub — Start instant video meetings, join calls, and manage history.">
   <title>Dashboard — MeetApp</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/auth.css">
-  <style>
-    .dashboard-container {
-      max-width: 640px;
-      margin-inline: auto;
-      padding-block: var(--space-16);
-    }
-    .dashboard-card {
-      background-color: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-8);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-6);
-    }
-    .user-info-box {
-      background-color: var(--surface-alt);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: var(--space-4);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-1);
-    }
-  </style>
+  <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
   <a href="#main" class="skip-link">Skip to main content</a>
 
   <!-- Header -->
-  <header class="site-header">
-    <div class="container">
-      <a href="index.html" class="site-brand" aria-label="MeetApp Home">MeetApp</a>
-      <nav class="site-nav" aria-label="Main Navigation">
-        <div class="nav-actions">
-          <button type="button" id="logout-btn" class="btn btn-secondary">Log out</button>
+  <header class="site-header" role="banner">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="dashboard.html" class="site-brand" aria-label="MeetApp Home">MeetApp</a>
+      
+      <div style="display: flex; align-items: center; gap: var(--space-4);">
+        <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+          <strong id="user-welcome-name" style="font-size: var(--text-sm); color: var(--ink);">User</strong>
+          <span id="user-email" class="text-xs text-muted">user@example.com</span>
         </div>
-      </nav>
+
+        <nav class="site-nav" aria-label="Main Navigation">
+          <div class="nav-actions">
+            <button type="button" id="btnCheckDevices" class="btn btn-secondary" title="Test Camera and Microphone">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                <path d="M23 7l-7 5 7 5V7z"></path>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+              Hardware Test
+            </button>
+            <button type="button" id="btnHelp" class="btn btn-secondary" aria-label="Help and Shortcuts">Help</button>
+            <button type="button" id="logout-btn" class="btn btn-secondary">Log out</button>
+          </div>
+        </nav>
+      </div>
     </div>
   </header>
 
-  <main id="main">
-    <div class="container dashboard-container">
-      <div class="dashboard-card">
-        <div>
-          <h1 style="font-size: var(--text-2xl); margin-bottom: 8px;">
-            Welcome, <span id="user-welcome-name">User</span>
-          </h1>
-          <p class="text-muted">You are securely signed in with two-step verification.</p>
+  <!-- Main Dashboard Shell -->
+  <main id="main" class="dashboard-shell">
+    
+    <!-- Hero Action Bar -->
+    <section class="action-hero" aria-label="Quick Actions">
+      <div class="action-hero-left">
+        <button type="button" id="btnNewMeeting" class="btn btn-primary" style="height: var(--touch-min); padding-inline: var(--space-6);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+          Start instant meeting
+        </button>
+      </div>
+
+      <div class="action-hero-right">
+        <div class="join-input-wrap">
+          <svg class="join-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3"></path>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <input type="text" id="joinInput" placeholder="Enter code or paste meeting link" aria-label="Meeting code or link" maxlength="100">
         </div>
+        <button type="button" id="btnJoinMeeting" class="btn btn-secondary" style="height: var(--touch-min); padding-inline: var(--space-5);">
+          Join
+        </button>
+      </div>
+    </section>
 
-        <div class="user-info-box">
-          <span class="text-xs text-muted">Account Email</span>
-          <strong id="user-email" class="text-sm">user@example.com</strong>
-        </div>
+    <!-- Architecture & Transparency Banner -->
+    <section class="trust-banner" role="region" aria-label="Architecture Disclosure">
+      <div class="trust-banner-content">
+        <svg class="trust-banner-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>
+          <strong>Direct P2P Mesh:</strong> Media streams directly between up to 5 browsers via WebRTC (DTLS-SRTP). In-call chat and files are encrypted at rest with AES-256-GCM.
+        </span>
+      </div>
+      <button type="button" id="btnLearnMore" class="btn-learn-more" aria-haspopup="dialog">
+        Learn more &rarr;
+      </button>
+    </section>
 
-        <p class="text-sm text-muted">
-          This dashboard placeholder verifies your end-to-end authentication and token storage flow. Full room creation and video collaboration actions will be wired up in Phase 4.
-        </p>
-
-        <div style="display: flex; gap: var(--space-4);">
-          <a href="index.html" class="btn btn-secondary">Back to home</a>
-          <button type="button" id="start-meeting-placeholder" class="btn btn-primary">Start a meeting</button>
+    <!-- Week Strip Navigation -->
+    <section class="week-strip-card" aria-label="Meeting Calendar">
+      <div class="week-strip-header">
+        <h2 class="week-strip-title">Recent Activity</h2>
+        <div class="week-nav-group">
+          <button type="button" id="btnPrevWeek" class="btn btn-secondary" style="padding: 6px 12px; min-height: 36px;" aria-label="Previous week">&larr; Previous</button>
+          <button type="button" id="btnNextWeek" class="btn btn-secondary" style="padding: 6px 12px; min-height: 36px;" aria-label="Next week">Next &rarr;</button>
         </div>
       </div>
-    </div>
+      <div class="week-days-row" id="weekStripContainer" role="tablist" aria-label="Days of the week">
+        <!-- Rendered by week-strip.js -->
+      </div>
+    </section>
+
+    <!-- Meetings Feed -->
+    <section class="meetings-section" aria-label="Meeting Feed">
+      <div class="meetings-header">
+        <h3 id="selectedDateHeading" style="font-family: var(--font-serif); font-size: var(--text-md); margin: 0; color: var(--ink);">
+          Selected Day
+        </h3>
+      </div>
+
+      <ul class="meetings-list" id="meetingsList" role="list">
+        <!-- Rendered dynamically by dashboard.js -->
+      </ul>
+
+      <div class="empty-meetings-state" id="emptyMeetingsState" style="display: none;">
+        <svg class="empty-meetings-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <p style="margin: 0; font-size: var(--text-base); font-weight: 500;">No meetings found for this day.</p>
+        <p class="text-xs text-muted" style="margin: 0;">Start an instant meeting above or paste a code to join one.</p>
+      </div>
+    </section>
+
   </main>
 
+  <!-- Device Check Dialog -->
+  <dialog id="deviceDialog" class="app-dialog" aria-labelledby="deviceDialogTitle">
+    <div class="dialog-header">
+      <h2 id="deviceDialogTitle" class="dialog-title">Hardware & Device Check</h2>
+      <button type="button" id="btnCloseDeviceDialog" class="btn-close-dialog" aria-label="Close dialog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="device-preview-box">
+        <video id="previewVideo" playsinline autoplay muted aria-label="Camera preview"></video>
+      </div>
+      <div class="audio-meter-wrap">
+        <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--muted);">
+          <span>Microphone Level</span>
+          <span>Live Input</span>
+        </div>
+        <div class="audio-meter-bar">
+          <div class="audio-meter-fill" id="audioFill"></div>
+        </div>
+      </div>
+      <p id="deviceStatus" class="text-xs text-muted" style="margin: 0;">Testing hardware...</p>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('deviceDialog').close()">Close</button>
+    </div>
+  </dialog>
+
+  <!-- Learn More Architecture Dialog -->
+  <dialog id="learnMoreDialog" class="app-dialog" aria-labelledby="learnMoreTitle">
+    <div class="dialog-header">
+      <h2 id="learnMoreTitle" class="dialog-title">Architecture & Security</h2>
+      <button type="button" id="btnCloseLearnMore" class="btn-close-dialog" aria-label="Close dialog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body text-sm" style="line-height: 1.6;">
+      <h4 style="margin: 0; color: var(--ink);">Full Mesh Topology</h4>
+      <p class="text-muted" style="margin: 0;">
+        MeetApp uses pure browser-native WebRTC mesh. Each participant connects directly to every other participant. This eliminates centralized video media servers, lowering latency and infrastructure cost, but creates an upload bandwidth ceiling suitable for up to 5 concurrent participants.
+      </p>
+
+      <h4 style="margin-top: var(--space-2); margin-bottom: 0; color: var(--ink);">What is Protected & What is Not</h4>
+      <ul class="text-muted" style="margin: 0; padding-left: var(--space-4);">
+        <li><strong>Media Streams:</strong> Fully encrypted in transit via WebRTC DTLS-SRTP. The server never sees raw audio/video.</li>
+        <li><strong>Chat & Files:</strong> Encrypted in transit (HTTPS/WSS) and encrypted at rest with AES-256-GCM using authenticated room/file AAD. Because the server decrypts messages for authorized participants, this is <em>not</em> client end-to-end encryption.</li>
+        <li><strong>IP Disclosure:</strong> In direct P2P mesh, peers can see each other's IP addresses. Connecting via TURN relays hides client IPs behind the relay address.</li>
+      </ul>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('learnMoreDialog').close()">Got it</button>
+    </div>
+  </dialog>
+
+  <!-- Help & Shortcuts Dialog -->
+  <dialog id="helpDialog" class="app-dialog" aria-labelledby="helpTitle">
+    <div class="dialog-header">
+      <h2 id="helpTitle" class="dialog-title">Help & Shortcuts</h2>
+      <button type="button" id="btnCloseHelp" class="btn-close-dialog" aria-label="Close dialog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body text-sm" style="line-height: 1.6;">
+      <h4 style="margin: 0; color: var(--ink);">Joining a Meeting</h4>
+      <p class="text-muted" style="margin: 0;">
+        Paste the 8-character room code (e.g. <code>DEMO1001</code>) or the full meeting URL into the join box and press <kbd>Enter</kbd>.
+      </p>
+
+      <h4 style="margin-top: var(--space-2); margin-bottom: 0; color: var(--ink);">Keyboard Shortcuts in Call</h4>
+      <ul class="text-muted" style="margin: 0; padding-left: var(--space-4);">
+        <li><kbd>M</kbd> &mdash; Toggle Microphone mute</li>
+        <li><kbd>V</kbd> &mdash; Toggle Camera on/off</li>
+        <li><kbd>Esc</kbd> &mdash; Close active dialog or side panel drawer</li>
+      </ul>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" onclick="document.getElementById('helpDialog').close()">Close</button>
+    </div>
+  </dialog>
+
   <!-- Footer -->
-  <footer class="site-footer">
+  <footer class="site-footer" role="contentinfo">
     <div class="container">
       <div class="footer-content">
         <div class="footer-meta">
@@ -91,6 +230,7 @@
     </div>
   </footer>
 
-  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/layout.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
 </body>
 </html>

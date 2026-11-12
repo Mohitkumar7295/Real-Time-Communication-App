@@ -82,6 +82,58 @@ graph TD
     WebRtcFeature["webrtc: IceConfigController"] --> SecurityPkg
 ```
 
+### 2.4 WebRTC Mesh Setup & Lifecycle Sequence Diagram
+
+**Perfect Negotiation Role Definition:**
+To eliminate offer glare and collision without unpredictable race conditions, MeetApp implements the W3C WebRTC Perfect Negotiation pattern where peer roles are deterministically assigned based on numeric user IDs:
+- **Polite Peer:** The participant with the **lower user ID** (`self.userId < peer.userId`) is designated **polite**. If an offer arrives while waiting for an answer to a local offer, the polite peer rolls back its pending local description (`rollback`) and accepts the incoming remote offer.
+- **Impolite Peer:** The participant with the **higher user ID** (`self.userId > peer.userId`) is designated **impolite**. If a collision offer arrives, the impolite peer ignores the incoming offer and continues waiting for an answer to its own offer.
+- **Initial Offer Rule:** Under normal join flows, the **newer participant** (joining later) sends offers to all existing peers listed in its `join` confirmation; existing peers answer.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P1 as Existing Peer (Priya, ID: 2 - Impolite)
+    participant WS as WebSocket Relay (/ws)
+    participant P2 as Newer Participant (Aarav, ID: 1 - Polite)
+
+    Note over P2,WS: Aarav enters room & receives join ack with Priya in peer list
+    P2->>P2: Create RTCPeerConnection for Priya (polite = true since 1 < 2)
+    P2->>P2: Add local audio & video tracks
+    Note over P2: Rule: Newer participant creates offer to existing peer
+    P2->>P2: createOffer() & setLocalDescription()
+    P2->>WS: {"type":"offer", "roomCode":"DEMO1001", "to": 2, "payload":{"sdp":"..."}}
+    WS->>P1: Relayed offer from Aarav
+    
+    P1->>P1: Create RTCPeerConnection for Aarav (polite = false since 2 > 1)
+    P1->>P1: Add local audio & video tracks
+    P1->>P1: setRemoteDescription(offer)
+    Note over P1: Flush any ICE candidates queued for Aarav
+    P1->>P1: createAnswer() & setLocalDescription()
+    P1->>WS: {"type":"answer", "roomCode":"DEMO1001", "to": 1, "payload":{"sdp":"..."}}
+    WS->>P2: Relayed answer from Priya
+    P2->>P2: setRemoteDescription(answer)
+    Note over P2: Flush any ICE candidates queued for Priya
+
+    par Trickle ICE Exchange
+        P1->>WS: {"type":"ice-candidate", "to": 1, "payload":{...}}
+        WS->>P2: Relayed ICE candidate
+        P2->>P2: addIceCandidate() (or buffer if remote description pending)
+        P2->>WS: {"type":"ice-candidate", "to": 2, "payload":{...}}
+        WS->>P1: Relayed ICE candidate
+        P1->>P1: addIceCandidate()
+    end
+
+    Note over P1,P2: Direct DTLS-SRTP P2P Media established (Video & Audio)
+
+    opt Leaver Teardown
+        P1->>WS: Close / Leave
+        WS->>P2: {"type":"peer-left", "payload":{"userId": 2, "reason":"LEFT"}}
+        P2->>P2: Close RTCPeerConnection for Priya
+        P2->>P2: Remove Priya's video tile from grid & free media resources
+    end
+```
+
 ---
 
 ## 3. Tech Stack Table
@@ -91,7 +143,7 @@ graph TD
 | **Backend Runtime** | Java 17 | Core programming language running on modern LTS runtime. |
 | **Framework** | Spring Boot 3.x | Enterprise application container, dependency injection, and auto-configuration. |
 | **Web & REST** | Spring Web (MVC) | RESTful API endpoints for authentication, room lifecycle, and file transfer. |
-| **Email & 2FA** | Spring Boot Starter Mail | Dispatches 6-digit OTP verification emails via SMTP. |
+| **Email & 2FA** | Resend API / Spring RestClient | Dispatches 6-digit OTP verification emails via Resend HTTPS API (console logging in dev). |
 | **Signaling** | Spring WebSocket | Plain WebSocket handler (`TextWebSocketHandler`) exchanging JSON envelopes. |
 | **Security & Auth** | Spring Security 6 & JJWT | Stateless authentication, BCrypt password hashing, and JWT authorization filter. |
 | **Data Persistence** | Spring Data JPA & Hibernate | Object-Relational Mapping (ORM) connecting via standard PostgreSQL JDBC. |
@@ -166,7 +218,8 @@ meetapp/
     │   │   │   └── OtpGenerator.java           # Cryptographically secure 6-digit random generator (SecureRandom)
     │   │   ├── email/                          # Email notifications and OTP delivery
     │   │   │   ├── EmailService.java           # Interface defining sendOtpEmail()
-    │   │   │   └── SmtpEmailService.java       # JavaMailSender implementation with dev-profile console logging
+    │   │   │   ├── ResendEmailService.java     # Resend HTTPS API implementation
+    │   │   │   └── LogEmailService.java        # Dev-profile console logging implementation
     │   │   ├── user/                           # User entity and profile management
     │   │   │   ├── User.java                   # JPA entity mapping the users table (id, name, email, password_hash, created_at)
     │   │   │   ├── UserRepository.java         # Spring Data repository for user lookups by email
@@ -182,32 +235,41 @@ meetapp/
     │   │   │   ├── RoomService.java            # Logic for creating rooms, verifying capacity (<5), leaving, and ending meetings
     │   │   │   ├── RoomController.java         # REST endpoints for /api/rooms, /api/rooms/{code}, and /api/rooms/{code}/end
     │   │   │   ├── RoomCodeGenerator.java      # Generates unguessable alphanumeric codes (e.g., ABC-DEF-GHI)
+    │   │   │   ├── RoomEndedEvent.java         # Spring ApplicationEvent published when host terminates a room
     │   │   │   └── dto/
     │   │   │       ├── CreateRoomRequest.java  # Optional room creation parameters
     │   │   │       ├── RoomResponse.java       # Room metadata DTO (code, host, active participants, created_at)
     │   │   │       └── ParticipantResponse.java # Active participant summary DTO
     │   │   ├── signaling/                      # Real-time WebSocket signaling, sessions, and dispatch (FR-8..14, FR-22..25)
-    │   │   │   ├── WebSocketConfig.java        # Registers SignalingWebSocketHandler at /ws with interceptors
-    │   │   │   ├── JwtHandshakeInterceptor.java # Authenticates JWT query parameter during WebSocket handshake (FR-25)
-    │   │   │   ├── SignalingWebSocketHandler.java # Handles incoming text messages and lifecycle events (open, close, error)
-    │   │   │   ├── RoomSessionRegistry.java    # Thread-safe in-memory map: roomCode -> userId -> WebSocketSession
+    │   │   │   ├── WebSocketConfig.java        # Registers SignalingWebSocketHandler at /ws with interceptors and limits
+    │   │   │   ├── JwtHandshakeInterceptor.java # Authenticates token/ticket, verifies Origin, validates active room membership
+    │   │   │   ├── RoomSessionRegistry.java    # Thread-safe in-memory map: roomCode -> userId -> WebSocketSession with serialized sends
+    │   │   │   ├── SignalingWebSocketHandler.java # Handles text messages, rate limits, session lifecycle (connect, disconnect, grace period)
     │   │   │   ├── message/
     │   │   │   │   ├── SignalMessage.java      # Generic envelope DTO: {type, roomCode, from, to, payload}
-    │   │   │   │   └── MessageType.java        # Enum of all signaling event types (join, offer, answer, draw, etc.)
+    │   │   │   │   └── MessageType.java        # Enum of all signaling event types (join, peer-joined, peer-left, ping, pong, room-ended, error, etc.)
     │   │   │   └── handler/
     │   │   │       ├── MessageHandler.java     # Interface for modular message processors
-    │   │   │       ├── JoinHandler.java        # Validates membership, registers session, broadcasts peer-joined (FR-4)
-    │   │   │       ├── WebRtcRelayHandler.java # Relays P2P offer, answer, and ice-candidate messages to targeted peer
-    │   │   │       ├── ChatHandler.java        # Validates, persists, and broadcasts chat messages to room (FR-22)
-    │   │   │       ├── WhiteboardHandler.java  # Buffers stroke events and broadcasts draw/clear to peers (FR-18..20)
-    │   │   │       └── ScreenShareHandler.java # Broadcasts screen-share-start and stop events (FR-12..14)
+    │   │   │       ├── JoinHandler.java        # Validates membership, sends join ack with peer list, broadcasts peer-joined (FR-4)
+    │   │   │       ├── HeartbeatHandler.java   # Handles ping messages and returns immediate pong responses
+    │   │   │       ├── WebRtcRelayHandler.java # Relays P2P offer, answer, and ice-candidate messages to targeted peer (FR-8..11)
+    │   │   │       ├── MuteStatusHandler.java  # Broadcasts audio/video mute status to peers and records state in registry
+    │   │   │       ├── ChatHandler.java        # Validates, persists, and broadcasts chat messages to room (Phase 9)
+    │   │   │       ├── WhiteboardHandler.java  # Buffers stroke events and broadcasts draw/clear to peers (Phase 11)
+    │   │   │       └── ScreenShareHandler.java # Broadcasts screen-share-start and stop events (Phase 8)
     │   │   ├── webrtc/                         # WebRTC configuration and dynamic ICE credentials
     │   │   │   ├── IceConfigController.java    # Serves STUN/TURN server URLs and credentials at /api/webrtc/ice-config
     │   │   │   └── dto/
-    │   │   │       └── IceServerResponse.java  # DTO delivering ICE server lists to frontend client
+    │   │   │       ├── IceServerResponse.java  # DTO representing a single STUN/TURN configuration entry
+    │   │   │       └── IceConfigResponse.java  # DTO delivering ICE server lists to frontend client
     │   │   ├── whiteboard/                     # Collaborative whiteboard stroke storage and state replay (FR-18..21)
-    │   │   │   ├── WhiteboardService.java      # In-memory buffer storing ordered strokes per room for late joiners
-    │   │   │   └── StrokeEvent.java            # Model representing drawing tool, coordinates, brush color, and thickness
+    │   │   │   ├── WhiteboardService.java      # In-memory thread-safe room stroke registry, cap enforcement, chunking
+    │   │   │   ├── WhiteboardStroke.java       # Immutable stroke entity (id, ownerId, tool, color, width, points, final)
+    │   │   │   ├── WhiteboardPoint.java        # Normalized 2D coordinate model [0.0 .. 1.0]
+    │   │   │   └── dto/
+    │   │   │       ├── DrawSegmentPayload.java # Incoming & broadcast draw segment payload
+    │   │   │       ├── StrokeUndoPayload.java  # Payload for stroke undo requests
+    │   │   │       └── BoardStateChunkPayload.java # Chunked board state payload for late-joiner replay
     │   │   ├── chat/                           # In-room text messaging (FR-22, FR-23)
     │   │   │   ├── ChatMessage.java            # JPA entity mapping messages table (id, room_id, sender_id, content, sent_at)
     │   │   │   ├── ChatMessageRepository.java  # Spring Data repository querying recent room chat history
@@ -215,16 +277,21 @@ meetapp/
     │   │   │   └── dto/
     │   │   │       └── ChatMessageDto.java     # Outgoing chat message DTO with sender name and ISO timestamp
     │   │   ├── file/                           # File sharing and download management (FR-15..17)
-    │   │   │   ├── FileController.java         # REST endpoints for /api/files/upload/{code}, download/{id}, and room file list
-    │   │   │   ├── FileService.java            # Business logic for file validation, storage, metadata persistence, and downloads
+    │   │   │   ├── FileController.java         # REST endpoints for /api/files/upload/{code}, download/{id}, delete/{id}, and file list
+    │   │   │   ├── FileService.java            # Business logic for file validation, storage, metadata persistence, quotas, and downloads
     │   │   │   ├── FileMeta.java               # JPA entity mapping files table (id, room_id, uploader_id, original_name, stored_name, content_type, size_bytes, uploaded_at)
-    │   │   │   ├── FileMetaRepository.java     # Spring Data repository querying files uploaded to an active room
-    │   │   │   ├── FileValidator.java          # Validates file size (<=10MB), MIME types, and blocks executable extensions
+    │   │   │   ├── FileMetaRepository.java     # Spring Data repository querying files uploaded to an active room with cursor support
+    │   │   │   ├── FileValidator.java          # Validates file size (<=10MB), extension allow-list, magic bytes, and blocks double extensions
     │   │   │   ├── storage/
     │   │   │   │   ├── StorageService.java     # Interface defining storeFile(), loadAsResource(), and deleteFile()
-    │   │   │   │   └── LocalStorageService.java # Implementation writing files to local disk directory with sanitized UUID names
+    │   │   │   │   ├── LocalStorageService.java # Implementation writing files to local disk directory with sanitized UUID names
+    │   │   │   │   └── StorageException.java   # Centralized storage I/O exception
+    │   │   │   ├── retention/
+    │   │   │   │   └── FileRetentionCleaner.java # Scheduled batch cleanup for files of ended/abandoned rooms
     │   │   │   └── dto/
-    │   │   │       └── FileMetaResponse.java   # File metadata response DTO (id, originalName, size, uploaderName, downloadUrl)
+    │   │   │       ├── FileUploadResponse.java # Upload confirmation DTO
+    │   │   │       ├── FileItemDto.java        # Metadata DTO for room files list
+    │   │   │       └── FileListResponse.java   # Cursor pagination wrapper DTO
     │   │   └── crypto/                         # Optional payload encryption utilities (FR-26)
     │   │       └── EncryptionService.java      # Optional AES-GCM 256-bit encryption/decryption helper for sensitive buffers
     │   └── resources/
@@ -255,18 +322,25 @@ meetapp/
     │           ├── css/
     │           │   ├── base.css                # Global CSS reset, typography, theme variables, and responsive layout
     │           │   ├── auth.css                # Styling for authentication forms and card containers
-    │           │   ├── app.css                 # Styling for authenticated pages: dashboard layout, profile forms, account menu
+    │           │   ├── app.css                 # Core authenticated application styles: header top bar, left navigation, modals, buttons
+    │           │   ├── dashboard.css           # Home page specific layout: week calendar strip, meetings list, empty state illustration, device check
     │           │   └── room.css                # Layout for video grid, floating toolbar, drawers, and whiteboard canvas
     │           └── js/
-    │               ├── config.js               # Central runtime configuration: API base URLs, WS endpoints, timeouts
-    │               ├── api.js                  # Fetch API wrapper appending Bearer JWT and handling 401 redirection
+    │               ├── config.js               # Central runtime configuration: API base URLs, WS endpoints, timeouts, MOCK switch
+    │               ├── api.js                  # Fetch API wrapper appending Bearer JWT, handling 401 redirection, and mock adapter
     │               ├── auth.js                 # Login/registration form handling, token persistence in sessionStorage, logout
-    │               ├── layout.js               # Shared DOM-safe authenticated navigation, user initials avatar, and route guard
-    │               ├── dashboard.js            # Dashboard logic: creating rooms, parsing room codes, device readiness check
+    │               ├── layout.js               # Shared header top bar, account dropdown, route guard, left/bottom navigation
+    │               ├── week-strip.js           # Sunday-to-Saturday calendar strip with day selection, navigation, and meeting markers
+    │               ├── devicecheck.js          # On-demand media hardware test (camera preview, audio level bar, device selectors, track cleanup)
+    │               ├── dashboard.js            # Home page orchestration: code/link parser, New meeting dropdown, daily meeting list, modals
     │               ├── profile.js              # Profile logic: name updates, password change, account deletion confirmation
     │               ├── socket.js               # WebSocket client managing connection, reconnection, heartbeat, and send()
-    │               ├── webrtc.js               # RTCPeerConnection mesh manager: local stream, peer offers/answers/ICE (FR-10)
-    │               ├── room.js                 # Room UI orchestration, dynamic video tile grid, media button toggles
+    │               ├── prejoin.js              # Pre-join room gate: validates room, shows peers, camera preview, mic meter, device toggles
+    │               ├── media.js                # Local media stream lifecycle: getUserMedia, track toggles, replaceTrack, audio level analysis
+    │               ├── peers.js                # WebRTC mesh engine: RTCPeerConnection pool, perfect negotiation, candidate queue, bitrate caps
+    │               ├── grid.js                 # Video grid layout (1-5 participants), speaking indicators, muted avatars, pin/enlarge
+    │               ├── participants.js         # Room presence manager: renders active participants list, updates live join/leave notices via aria-live
+    │               ├── room.js                 # Meeting room coordinator: binds media, peers, grid, control toolbar, and leave/end actions
     │               ├── screenshare.js          # Screen capture logic: getDisplayMedia, track replacement, revert to camera (FR-12)
     │               ├── chat.js                 # Chat drawer UI, message rendering, unread badge counter (FR-22, FR-23)
     │               ├── files.js                # File upload handling, progress indication, drawer listing, downloads (FR-15)
@@ -294,10 +368,10 @@ meetapp/
 | `security` | `JwtService`, `JwtAuthFilter` | Generates/validates JWTs; filters HTTP requests; checks WS handshake. | `CustomUserDetailsService` | JJWT, Spring Security |
 | `auth` | `AuthController`, `AuthService` | User registration, credential check, OTP challenge initiation, token issuance. | `UserService`, `OtpService`, `JwtService` | Spring Web, BCrypt |
 | `otp` | `OtpService`, `OtpGenerator`, `OtpChallengeRepository` | SecureRandom 6-digit OTP generation, SHA-256 hashing at rest, expiry/attempt validation. | `EmailService` | Spring Data JPA, SecureRandom |
-| `email` | `EmailService`, `SmtpEmailService` | Asynchronous SMTP delivery of OTP verification emails; console logging in dev profile. | None | Spring Boot Mail, JavaMail |
-| `user` | `UserService`, `UserRepository` | Retrieves user profile data and persists user accounts. | None | Spring Data JPA |
-| `room` | `RoomService`, `RoomRepository` | Creates rooms, generates codes, validates max 5 capacity, ends meetings. | `UserService` | Spring Data JPA |
-| `signaling`| `SignalingWebSocketHandler`, `RoomSessionRegistry` | Authenticates WebSocket sessions, tracks in-memory peer map, dispatches messages. | `RoomService`, `WhiteboardService`, `ChatService` | Spring WebSocket |
+| `email` | `EmailService`, `ResendEmailService`, `LogEmailService` | Resend HTTPS API delivery of OTP verification emails; console logging in dev profile. | None | Spring RestClient, Resend API |
+| `user` | `UserService`, `UserRepository`, `UserController` | Retrieves user profile data, persists user accounts, serves user room history range queries (`/api/users/me/rooms`). | None | Spring Data JPA |
+| `room` | `RoomService`, `RoomRepository` | Creates rooms (decoupled host participant entry), generates codes, validates max 5 capacity, ends meetings. | `UserService` | Spring Data JPA |
+| `signaling`| `SignalingWebSocketHandler`, `RoomSessionRegistry` | Authenticates WebSocket sessions, tracks in-memory peer map, dispatches messages, manages reconnect grace period. | `RoomService`, `WhiteboardService`, `ChatService` | Spring WebSocket |
 | `webrtc` | `IceConfigController` | Provides client with dynamic STUN/TURN server URLs and credentials. | `AppProperties` | Spring Web |
 | `whiteboard`| `WhiteboardService` | Maintains in-memory ordered list of strokes per room; serves state to late joiners. | None | Java Collections |
 | `chat` | `ChatService`, `ChatMessageRepository` | Persists text messages, enriches with sender name/timestamp, formats broadcasts. | `RoomService`, `UserService` | Spring Data JPA |
@@ -310,12 +384,15 @@ meetapp/
 | `config.js` | Single source of truth for backend URLs, WebSocket paths, and constants. | None | Vanilla ES6 |
 | `api.js` | Generic HTTP client wrapper injecting `Authorization: Bearer <token>` and handling errors. | `config.js` | Fetch API |
 | `auth.js` | Handles registration and login form submissions, stores JWT, manages logout. | `api.js`, `config.js` | Vanilla JS, DOM |
-| `layout.js` | Generates slim authenticated header, initials badge, account dropdown, and route guard. | `auth.js`, `api.js` | Vanilla JS, DOM |
-| `dashboard.js`| Binds dashboard interactions (create room, join room by code, on-demand device check). | `layout.js`, `api.js`, `config.js` | Vanilla JS, DOM |
+| `layout.js` | Shared header top bar, wordmark, code/link input, New dropdown, Help/Settings buttons, initials avatar, account dropdown, route guard. | `auth.js`, `api.js` | Vanilla JS, DOM |
+| `week-strip.js` | Calendar strip (Sun-Sat) with local timezone calculation, day selection, week nav (prev/next/today), and meeting markers. | None | Vanilla JS, DOM |
+| `devicecheck.js` | On-demand camera preview, microphone volume level meter, device select enumeration, hardware error reporting, track cleanup. | None | WebRTC MediaStream, Web Audio API |
+| `dashboard.js`| Binds home screen interactions: week strip updates, daily meetings rendering, empty state, link creation modals, copy utilities. | `layout.js`, `week-strip.js`, `devicecheck.js`, `api.js`, `config.js` | Vanilla JS, DOM |
 | `profile.js` | Binds profile forms (update name, change password with strength meter, delete account). | `layout.js`, `api.js`, `auth.js` | Vanilla JS, DOM |
-| `socket.js` | Connects to `/ws`, manages automatic reconnection, and serializes/deserializes JSON. | `config.js` | WebSocket API |
-| `webrtc.js` | Manages `RTCPeerConnection` mesh instances, ICE candidate exchange, and remote video tracks. | `socket.js`, `api.js` | WebRTC API |
-| `room.js` | Orchestrates room UI, renders responsive video grid, handles mic/camera toggle buttons. | `webrtc.js`, `socket.js` | Vanilla JS, CSS Grid |
+| `socket.js` | Connects to `/ws`, manages heartbeat ping/pong, automatic reconnection with backoff/jitter, and serializes/deserializes JSON. Includes mock socket adapter for MOCK mode. | `config.js` | WebSocket API |
+| `prejoin.js`| Validates room code via REST, queries active participants, shows camera preview placeholder, calls room join endpoint. | `api.js`, `auth.js`, `config.js` | Vanilla JS, DOM |
+| `participants.js`| Renders active participants list with Host/Guest markers, binds live peer-joined and peer-left updates with aria-live announcements. | None | Vanilla JS, DOM |
+| `room.js` | Orchestrates room page shell: connection status indicator, top bar, disabled tool placeholders, leave/end actions. | `socket.js`, `participants.js`, `api.js`, `auth.js` | Vanilla JS, DOM |
 | `screenshare.js`| Invokes `getDisplayMedia()`, executes track replacement on active peer connections. | `webrtc.js`, `socket.js` | WebRTC Display API |
 | `chat.js` | Handles sending and receiving text chat, renders message bubbles, updates unread badge. | `socket.js` | Vanilla JS, DOM |
 | `files.js` | Manages file drag-and-drop, calls REST upload/download endpoints, updates file drawer. | `api.js`, `socket.js` | Fetch API, FormData |
@@ -460,7 +537,7 @@ sequenceDiagram
     OtpService->>OtpService: Generate 6-digit OTP (SecureRandom) & SHA-256 hash
     OtpService->>PostgresDB: Save otp_challenges (challengeId, hash, expires_at)
     OtpService->>EmailService: sendOtpEmail(email, otp)
-    Note over EmailService: In dev mode, OTP is logged to console; in prod, dispatched via SMTP
+    Note over EmailService: In dev mode, OTP is logged to console; in prod, dispatched via Resend HTTPS API
     AuthService-->>AuthController: LoginInitResponse (otpRequired, challengeId, maskedEmail, expiresInSeconds)
     AuthController-->>Browser: HTTP 200 OK (Prompt user for OTP)
 
@@ -478,7 +555,7 @@ sequenceDiagram
     Browser->>Browser: Store JWT in localStorage
 ```
 
-> **Development Mode Note:** When running under the `dev` Spring profile (`application-dev.yml`), the generated 6-digit OTP is output directly to the application logs via SLF4J, allowing full local development and testing without requiring live SMTP credentials. In `prod`, logging raw OTP codes is strictly forbidden.
+> **Development Mode Note:** When running under the `dev` Spring profile (`application-dev.yml`), the generated 6-digit OTP is output directly to the application logs via SLF4J, allowing full local development and testing without requiring live Resend API credentials. In `prod`, logging raw OTP codes is strictly forbidden.
 
 ### 10.2 Create and Join Room with WebSocket Handshake
 ```mermaid
@@ -530,53 +607,170 @@ sequenceDiagram
     Note over BrowserNew,BrowserExisting: P2P Media Stream Established (DTLS-SRTP)
 ```
 
-### 10.4 Screen Sharing with Track Replacement
+### 10.4 Screen Sharing with Dual-Stream Renegotiation (Phase 8)
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Sharer
-    participant BrowserSharer as Sharer Browser
-    participant Signaling as Signaling Handler
+    actor Presenter
+    participant BrowserPresenter as Presenter Browser
+    participant Signaling as Spring WebSocket Signaling
     participant BrowserPeer as Peer Browser
 
-    Sharer->>BrowserSharer: Clicks "Share Screen"
-    BrowserSharer->>BrowserSharer: navigator.mediaDevices.getDisplayMedia()
-    Note over BrowserSharer: For each RTCPeerConnection: sender.replaceTrack(screenTrack)
-    BrowserSharer->>Signaling: {"type": "screen-share-start", "roomCode": "ABC-DEF"}
-    Signaling->>BrowserPeer: Broadcast {"type": "screen-share-start", "from": "Sharer"}
-    BrowserPeer->>BrowserPeer: Renders incoming screen track in enlarged tile
-    Sharer->>BrowserSharer: Clicks "Stop Sharing"
-    Note over BrowserSharer: For each RTCPeerConnection: sender.replaceTrack(cameraTrack)
-    BrowserSharer->>Signaling: {"type": "screen-share-stop", "roomCode": "ABC-DEF"}
-    Signaling->>BrowserPeer: Broadcast {"type": "screen-share-stop", "from": "Sharer"}
-    BrowserPeer->>BrowserPeer: Reverts tile display back to camera video track
+    Presenter->>BrowserPresenter: Clicks "Share screen"
+    BrowserPresenter->>BrowserPresenter: getDisplayMedia({ video: { max: 1080p, 15fps, detail } })
+    Note over BrowserPresenter: Screen track added to its own MediaStream (separate from camera)
+    BrowserPresenter->>BrowserPresenter: For each peer: pc.addTrack(screenTrack, screenStream)
+    Note over BrowserPresenter,BrowserPeer: Triggers onnegotiationneeded -> Perfect Negotiation (SDP offer/answer)
+    BrowserPresenter->>Signaling: {"type":"screen-share-start", "roomCode":"DEMO1001", "payload":{"streamId":"scr-1", "label":"Window"}}
+    Note over Signaling: Atomic check: room has no active presenter. Stores presenter state in registry.
+    Signaling->>BrowserPeer: Broadcast {"type":"screen-share-start", "from": 1, "payload":{"userId":1, "streamId":"scr-1", "label":"Window"}}
+    BrowserPeer->>BrowserPeer: Receives track with streamId "scr-1" via ontrack
+    BrowserPeer->>BrowserPeer: Renders screen in large presenter tile (contain) with camera strip
+
+    alt Normal Stop (Presenter clicks "Stop sharing" or browser bar)
+        Presenter->>BrowserPresenter: Clicks "Stop sharing" or browser bar ended event
+        BrowserPresenter->>BrowserPresenter: screenTrack.stop() & pc.removeTrack(sender)
+        Note over BrowserPresenter,BrowserPeer: Renegotiates via Perfect Negotiation
+        BrowserPresenter->>Signaling: {"type":"screen-share-stop", "roomCode":"DEMO1001", "payload":{"reason":"USER_STOPPED"}}
+        Note over Signaling: Clears presenter in registry
+        Signaling->>BrowserPeer: Broadcast {"type":"screen-share-stop", "from": 1, "payload":{"userId":1, "reason":"USER_STOPPED"}}
+        BrowserPeer->>BrowserPeer: Removes presenter tile & restores normal video grid
+    else Host Stop Authority
+        actor Host
+        Host->>Signaling: {"type":"screen-share-stop", "roomCode":"DEMO1001", "payload":{"reason":"HOST_STOPPED"}}
+        Note over Signaling: Verified caller is room host. Clears presenter in registry.
+        Signaling->>BrowserPresenter: Broadcast {"type":"screen-share-stop", "from": 2, "payload":{"userId":1, "reason":"HOST_STOPPED"}}
+        Signaling->>BrowserPeer: Broadcast {"type":"screen-share-stop", "from": 2, "payload":{"userId":1, "reason":"HOST_STOPPED"}}
+        BrowserPresenter->>BrowserPresenter: Stops local screen track & renegotiates
+        BrowserPeer->>BrowserPeer: Removes presenter tile & restores normal video grid
+    end
 ```
 
-### 10.5 File Upload and Notification Broadcast
+### 10.5 Real-Time Group Chat, Persistence & History Sequence
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Uploader
-    participant Browser
-    participant FileController
-    participant FileValidator
-    participant StorageService
-    participant PostgresDB
-    participant SignalingHandler
+    actor UserA as Sender (Aarav)
+    participant BrowserA as Browser A
+    participant WS as Signaling Handler (/ws)
+    participant ChatHandler as ChatHandler
+    participant ChatSvc as ChatService
+    participant Crypto as EncryptionService (AES-256-GCM)
+    participant DB as Postgres (messages)
+    participant Registry as RoomSessionRegistry
+    participant BrowserB as Browser B (Peer)
 
-    Uploader->>Browser: Selects file (sample.pdf, 4 MB)
-    Browser->>FileController: POST /api/files/upload/ABC-DEF (Multipart)
-    FileController->>FileValidator: validate(file)
-    FileValidator->>FileValidator: Check size <=10MB, MIME type, block .exe
-    FileController->>StorageService: storeFile(file)
-    StorageService->>StorageService: Save to /uploads/{UUID}.pdf
-    FileController->>PostgresDB: Insert FileMeta record
-    FileController-->>Browser: HTTP 201 Created (FileMetaResponse)
-    Browser->>SignalingHandler: {"type": "file-shared", "payload": FileMeta}
-    SignalingHandler-->>Browser: Broadcast to all room peers
+    UserA->>BrowserA: Types message & clicks Send / presses Enter
+    BrowserA->>BrowserA: Generates random clientId ("c-101")
+    BrowserA->>BrowserA: Renders optimistic pending message bubble
+    BrowserA->>WS: {"type":"chat", "roomCode":"DEMO1001", "payload":{"text":"Hello everyone", "clientId":"c-101"}}
+    WS->>ChatHandler: handle(session, message)
+    ChatHandler->>ChatHandler: Validate length (1-1000), lines (<=20), no control chars
+    ChatHandler->>ChatHandler: Check token bucket rate limit (5 burst, 1 msg/s)
+    ChatHandler->>ChatSvc: saveMessage(roomId, senderId, text)
+    ChatSvc->>Crypto: encrypt(text)
+    Crypto-->>ChatSvc: Base64(version + IV + ciphertext + tag)
+    ChatSvc->>DB: INSERT INTO messages (room_id, sender_id, content, sent_at)
+    DB-->>ChatSvc: Generated message ID = 142, sentAt = NOW()
+    ChatSvc-->>ChatHandler: Saved ChatMessage
+    ChatHandler->>Registry: broadcast("DEMO1001", null, broadcastMsg)
+    
+    par Live Broadcast to ALL Participants (Including Sender)
+        Registry-->>BrowserA: {"type":"chat", "from":1, "payload":{"id":142, "from":1, "name":"Aarav", "text":"Hello everyone", "sentAt":"...", "clientId":"c-101"}}
+        BrowserA->>BrowserA: Matches clientId "c-101": marks pending -> sent (saves id 142)
+        Registry-->>BrowserB: {"type":"chat", "from":1, "payload":{"id":142, "from":1, "name":"Aarav", "text":"Hello everyone", "sentAt":"...", "clientId":"c-101"}}
+        BrowserB->>BrowserB: Appends message to chat panel / increments unread badge
+    end
+
+    opt Late Joiner or Page Refresh (History Recovery)
+        actor UserC as Late Joiner
+        participant BrowserC as Browser C
+        participant REST as ChatController
+        UserC->>BrowserC: Joins room DEMO1001
+        BrowserC->>REST: GET /api/rooms/DEMO1001/messages?limit=50
+        REST->>ChatSvc: getRecentMessages(roomId, limit=50, before=null)
+        ChatSvc->>DB: SELECT ... FROM messages WHERE room_id = :id ORDER BY id DESC LIMIT 50
+        DB-->>ChatSvc: Rows (encrypted ciphertext)
+        ChatSvc->>Crypto: decrypt(ciphertext)
+        ChatSvc-->>REST: List<ChatHistoryResponse> (oldest-first)
+        REST-->>BrowserC: 200 OK [ {id: 142, senderId: 1, text: "Hello everyone", ...} ]
+        BrowserC->>BrowserC: Renders initial chat history
+    end
 ```
 
-### 10.6 Whiteboard Synchronization and Late-Joiner Catch-Up
+### 10.6 In-Room File Sharing: Upload, Storage, Signaling, Download & Deletion
+```mermaid
+sequenceDiagram
+    autonumber
+    actor UserA as Uploader (Aarav)
+    participant BrowserA as Browser A
+    participant FileCtrl as FileController
+    participant FileSvc as FileService
+    participant Validator as FileValidator
+    participant Storage as LocalStorageService
+    participant DB as Postgres (files)
+    participant Registry as RoomSessionRegistry
+    participant BrowserB as Peer Browser (Priya)
+
+    Note over UserA, BrowserA: 1. File Upload & Validation
+    UserA->>BrowserA: Selects file (e.g. report.pdf, 2 MB)
+    BrowserA->>FileCtrl: POST /api/files/upload/DEMO1001 (multipart/form-data)
+    FileCtrl->>FileSvc: uploadFile("DEMO1001", file, userA.id)
+    FileSvc->>FileSvc: Verify User A is active participant in DEMO1001
+    FileSvc->>FileSvc: Check room storage quota (<=20 files, <=50 MB)
+    FileSvc->>Validator: validateFile(file)
+    Validator->>Validator: Verify size <= 10MB, extension allow-list, no double extension
+    Validator->>Validator: Inspect stream magic bytes (%PDF-)
+    Validator-->>FileSvc: Validated (sanitized display name)
+
+    Note over FileSvc, Storage: 2. Storage & Atomic Persistence
+    FileSvc->>Storage: store(fileStream, sanitizedName, roomId, fileId)
+    Storage->>Storage: Write to temp file with UUID name
+    opt Encryption at Rest (AES-256-GCM)
+        Storage->>Storage: Encrypt buffer with random IV & AAD(roomId, fileId)
+    end
+    Storage->>Storage: Atomic move/rename to final storage directory
+    Storage-->>FileSvc: storedName ("uuid-1234.pdf")
+
+    FileSvc->>DB: INSERT INTO files (room_id, uploader_id, original_name, stored_name, content_type, size_bytes)
+    DB-->>FileSvc: Generated file ID = 42
+    FileSvc-->>FileCtrl: FileUploadResponse(id=42, ...)
+    FileCtrl-->>BrowserA: HTTP 201 Created
+
+    Note over FileSvc, Registry: 3. Real-Time Broadcast Notification (Server -> Room)
+    Note over FileSvc, Registry: Server broadcasts file-shared strictly AFTER commit; client NEVER emits it
+    FileSvc->>Registry: broadcast("DEMO1001", null, file-shared envelope)
+    Registry-->>BrowserA: {"type":"file-shared", "payload":{"fileId":42, "originalName":"report.pdf", ...}}
+    Registry-->>BrowserB: {"type":"file-shared", "payload":{"fileId":42, "originalName":"report.pdf", ...}}
+    BrowserB->>BrowserB: Prepends file to Files list / increments unread badge
+
+    Note over BrowserB, Storage: 4. Secure Streaming Download
+    UserB->>BrowserB: Clicks "Download"
+    BrowserB->>FileCtrl: GET /api/files/download/42 (with Authorization: Bearer JWT)
+    FileCtrl->>FileSvc: loadFileAsResource(fileId=42, userB.id)
+    FileSvc->>FileSvc: Verify User B is participant in DEMO1001 (403/404 if not)
+    FileSvc->>Storage: loadAsResource(storedName, roomId, fileId)
+    Storage-->>FileSvc: Binary InputStream (decrypted if encrypted)
+    FileSvc-->>FileCtrl: Resource with headers (attachment, nosniff, no-store)
+    FileCtrl-->>BrowserB: HTTP 200 OK (Binary stream)
+    BrowserB->>BrowserB: Triggers browser download save dialog
+
+    Note over UserA, Registry: 5. Authorized File Deletion
+    UserA->>BrowserA: Clicks "Delete"
+    BrowserA->>FileCtrl: DELETE /api/files/42
+    FileCtrl->>FileSvc: deleteFile(fileId=42, userA.id)
+    FileSvc->>FileSvc: Verify caller is uploader OR meeting host
+    FileSvc->>Storage: delete(storedName)
+    FileSvc->>DB: DELETE FROM files WHERE id = 42
+    FileSvc->>Registry: broadcast("DEMO1001", null, file-deleted { fileId: 42 })
+    Registry-->>BrowserA: {"type":"file-deleted", "payload":{"fileId":42}}
+    Registry-->>BrowserB: {"type":"file-deleted", "payload":{"fileId":42}}
+    BrowserA->>BrowserA: Removes file from list
+    BrowserB->>BrowserB: Removes file from list
+    FileCtrl-->>BrowserA: HTTP 204 No Content
+```
+
+### 10.7 Whiteboard Synchronization and Late-Joiner Catch-Up
 ```mermaid
 sequenceDiagram
     autonumber
@@ -643,6 +837,62 @@ sequenceDiagram
     BrowserHost->>BrowserHost: Close peer connections & redirect to ended.html
 ```
 
+### 10.9 Real-Time Collaborative Whiteboard Flow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as Alice (Drawer)
+    actor Bob as Bob (Peer)
+    actor Charlie as Charlie (Late Joiner)
+    participant WS as WebSocket Handler (/ws)
+    participant WH as WhiteboardHandler
+    participant Svc as WhiteboardService
+    participant Reg as RoomSessionRegistry
+
+    Note over Alice,Bob: Active meeting room DEMO1001
+    Alice->>WS: {"type": "draw", "strokeId": "s_1", "tool": "pen", "points": [...], "final": false}
+    WS->>WH: handleMessage(session, draw)
+    WH->>Svc: addSegment("DEMO1001", AliceId, segment)
+    Svc-->>WH: Segment Accepted
+    WH->>Reg: broadcast("DEMO1001", excludeUser: AliceId, envelope)
+    Reg->>Bob: {"type": "draw", "from": AliceId, "payload": {...}}
+    Bob->>Bob: Render incoming stroke segment
+
+    Alice->>WS: {"type": "draw", "strokeId": "s_1", "tool": "pen", "points": [...], "final": true}
+    WS->>WH: handleMessage(session, draw)
+    WH->>Svc: addSegment("DEMO1001", AliceId, segment)
+    WH->>Reg: broadcast("DEMO1001", excludeUser: AliceId, envelope)
+    Reg->>Bob: {"type": "draw", "from": AliceId, "payload": {..., "final": true}}
+    Bob->>Bob: Finalize stroke
+
+    alt Stroke Undo
+        Alice->>WS: {"type": "stroke-undo", "strokeId": "s_1"}
+        WS->>WH: handleMessage(session, undo)
+        WH->>Svc: undoStroke("DEMO1001", AliceId, "s_1")
+        Svc-->>WH: Stroke Removed
+        WH->>Reg: broadcast("DEMO1001", excludeUser: null, envelope)
+        Reg->>Alice: {"type": "stroke-undo", "from": AliceId, "payload": {"strokeId": "s_1"}}
+        Reg->>Bob: {"type": "stroke-undo", "from": AliceId, "payload": {"strokeId": "s_1"}}
+        Bob->>Bob: Evict stroke from local list & re-render
+    else Clear Board (Host Only)
+        Alice->>WS: {"type": "clear-board"}
+        WS->>WH: handleMessage(session, clear)
+        WH->>Svc: clearBoard("DEMO1001", AliceId)
+        Svc-->>WH: Board Cleared
+        WH->>Reg: broadcast("DEMO1001", excludeUser: null, envelope)
+        Reg->>Alice: {"type": "clear-board", "from": AliceId}
+        Reg->>Bob: {"type": "clear-board", "from": AliceId}
+        Bob->>Bob: Clear canvas
+    end
+
+    Note over Charlie: Charlie joins room DEMO1001
+    Charlie->>WS: {"type": "join", ...}
+    WS->>Svc: getSnapshotChunks("DEMO1001", 16384)
+    Svc-->>WS: List<BoardStateChunkPayload> [chunk 0 of 1]
+    WS->>Charlie: {"type": "board-state", "payload": {"chunkIndex": 0, "totalChunks": 1, "strokes": [...]}}
+    Charlie->>Charlie: Reassemble chunks & render full canvas
+```
+
 ---
 
 ## 11. WebRTC Mesh Design
@@ -655,12 +905,14 @@ MeetApp implements a peer-to-peer Full Mesh topology where every participant est
 ### 11.2 Dynamic STUN/TURN Negotiation
 WebRTC ICE credentials must never be hardcoded into client-side JavaScript. The frontend requests configuration dynamically via `GET /api/webrtc/ice-config`. The backend constructs the ICE server list from environment variables (`STUN_URLS`, `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL`). If direct peer-to-peer connection fails (e.g., across symmetric NATs or corporate firewalls), traffic seamlessly relays via the configured TURN server.
 
-### 11.3 Screen Sharing and Track Substitution
-Screen sharing uses the browser's native `navigator.mediaDevices.getDisplayMedia()` API:
-1. When initiated, the local display track is captured.
-2. For each active `RTCPeerConnection`, the outgoing video `RTCRtpSender` track is replaced using `sender.replaceTrack(displayTrack)`. This track substitution avoids tearing down or renegotiating the underlying peer connection.
-3. When the user stops sharing, `sender.replaceTrack(cameraTrack)` restores the webcam feed seamlessly.
-4. Mobile browsers do not support display media broadcast and are restricted to view-only mode (FR-18).
+### 11.3 Screen Sharing and Dual-Stream WebRTC Integration
+Screen sharing leverages the browser's native `navigator.mediaDevices.getDisplayMedia()` API:
+1. **Second Video Track (Dual-Stream Mesh):** When initiated, the local display track is captured into its own dedicated `MediaStream` (`{ video: { max: 1080p, 15fps, contentHint: "detail" }, audio: false }`). For each active `RTCPeerConnection`, the screen track is added via `pc.addTrack(screenTrack, screenStream)`.
+2. **Perfect Negotiation & Identification:** Adding the track triggers `onnegotiationneeded`, seamlessly adding a second video m-line via existing polite/impolite Perfect Negotiation. Remote peers distinguish the screen track from the webcam track via the `streamId` broadcast in `screen-share-start`.
+3. **Frontend Inbound Stream Verification Rule:** A client must treat a received remote media stream as the shared screen **only if** it arrives on the verified presenter's own `RTCPeerConnection` **and** its `MediaStream.id` equals the announced `streamId`. Any other stream or track claim from an unannounced peer or mismatched stream ID is ignored.
+4. **Simultaneous Camera & Screen:** Unlike single-track substitution (`replaceTrack`), dual-stream sharing preserves the presenter's webcam tile in a compact camera strip while rendering the shared screen in a high-resolution, centered presenter tile (`object-fit: contain`).
+5. **Clean Teardown:** When sharing stops (via the UI button, the browser's native stop bar, presenter departure, socket reconnect, or host termination), `screenTrack.stop()` is invoked and the sender is removed via `pc.removeTrack(sender)`, triggering renegotiation and cleanly restoring the standard video grid.
+6. **Mobile View-Only:** Mobile browsers cannot capture display surfaces due to native mobile OS sandbox restrictions; they participate as view-only screen consumers (FR-18).
 
 ### 11.4 Failure Recovery and Teardown
 If ICE connection state transitions to `failed`, the client triggers an ICE restart once (`pc.restartIce()`). If connection cannot be re-established within 10 seconds, the user is notified with a reconnection failure banner. When a user navigates away or clicks "Leave", all `MediaStreamTrack` instances are explicitly stopped (`track.stop()`) and peer connections are closed (`pc.close()`).
@@ -675,7 +927,8 @@ The backend manages active WebSocket sessions using an in-memory, thread-safe da
 
 ### 12.2 Relay vs. Broadcast Semantics
 - **Targeted Relay:** For WebRTC negotiation messages (`offer`, `answer`, `ice-candidate`), the envelope contains a `to` field. The registry looks up the target `userId` in the specified `roomCode` and writes the message exclusively to that user's session.
-- **Room Broadcast:** For collaborative events (`peer-joined`, `peer-left`, `chat`, `draw`, `clear-board`, `file-shared`, `mute-status`), the message is broadcast to all active sessions in the room *excluding the sender*.
+- **Room Broadcast:** For collaborative events (`peer-joined`, `peer-left`, `draw`, `clear-board`, `file-shared`, `mute-status`), the message is broadcast to all active sessions in the room *excluding the sender*.
+- **Authoritative Echo Broadcast (Chat):** For `chat` messages, the envelope is broadcast to **ALL active participants in the room INCLUDING the sender** (`excludeUserId = null`). This provides an authoritative server echo carrying the persisted `id`, `sentAt`, and matching `clientId`, allowing the sender to resolve its local pending message state.
 
 ### 12.3 Session Lifecycle and Conflict Resolution
 1. **Capacity Enforcement:** During WebSocket connection establishment, if the room already contains 5 active sessions and the connecting user is not an existing member, the handshake is rejected with error code `ROOM_FULL`.
@@ -721,14 +974,12 @@ All sensitive values and environment-dependent properties are externalized via e
 | `TURN_USERNAME` | No | TURN server authentication username. |
 | `TURN_CREDENTIAL` | No | TURN server authentication password/credential. |
 | `AES_KEY` | No | Optional 256-bit base64 key for client/server payload encryption. |
-| `MAIL_HOST` | Yes (prod) | SMTP server host (e.g., `smtp.gmail.com` or `smtp.sendgrid.net`). |
-| `MAIL_PORT` | Yes (prod) | SMTP server port (default: `587`). |
-| `MAIL_USERNAME` | Yes (prod) | SMTP authentication username / account. |
-| `MAIL_PASSWORD` | Yes (prod) | SMTP authentication password or App Password. |
-| `MAIL_FROM` | Yes (prod) | Sender address for outgoing OTP emails (e.g., `no-reply@meetapp.com`). |
+| `RESEND_API_KEY` | Yes (prod) | Resend API key for HTTPS transactional email delivery. |
+| `MAIL_FROM` | Yes (prod) | Verified sender address for outgoing OTP emails (e.g., `onboarding@resend.dev` or custom domain). |
+| `EMAIL_PROVIDER` | No | Email provider strategy: `resend` for HTTPS API, or `log` for console logging (default: `log`). |
 | `OTP_EXPIRY_MINUTES`| No | Validity window for OTP challenges (default: `5` minutes). |
 
-- **Profiles:** `application-dev.yml` enables verbose logging and relaxed CORS for local development with Docker Compose. In the `dev` profile, generated 6-digit OTP codes are logged to console output via SLF4J to allow testing without an SMTP server (never permitted in `prod`). `application-prod.yml` enforces strict SSL and production property constraints.
+- **Profiles:** `application-dev.yml` enables verbose logging and relaxed CORS for local development with Docker Compose. In the `dev` profile, generated 6-digit OTP codes are logged to console output via SLF4J to allow testing without live email delivery (never permitted in `prod`). `application-prod.yml` enforces strict SSL and production property constraints.
 - **Template:** A `.env.example` file is maintained in the repository root documenting all variable names without values.
 
 ---

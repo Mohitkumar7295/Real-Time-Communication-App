@@ -110,6 +110,96 @@ async function mockFetch(endpoint, method, body, token) {
     };
   }
 
+  // 6. POST /api/ws-ticket
+  if (endpoint === '/ws-ticket' && method === 'POST') {
+    return {
+      ticket: `mock_ticket_${Date.now()}`,
+      expiresInSeconds: 30
+    };
+  }
+
+  // 7. GET /api/webrtc/ice-config
+  if (endpoint === '/webrtc/ice-config' && method === 'GET') {
+    return {
+      iceServers: [
+        { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }
+      ]
+    };
+  }
+
+  // 8. POST /api/rooms
+  if (endpoint === '/rooms' && method === 'POST') {
+    return {
+      roomCode: 'DEMO1001',
+      host: { id: 1, name: 'Demo User' },
+      activeParticipantCount: 0,
+      active: true,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  // 9. GET /api/rooms/{code}
+  if (endpoint.startsWith('/rooms/') && method === 'GET') {
+    const code = endpoint.replace('/rooms/', '');
+    return {
+      roomCode: code.toUpperCase(),
+      host: { id: 1, name: 'Demo User' },
+      activeParticipantCount: 2,
+      active: true,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  // 10. POST /api/rooms/{code}/join
+  if (endpoint.includes('/join') && method === 'POST') {
+    return { message: 'Joined successfully' };
+  }
+
+  // 11. POST /api/rooms/{code}/leave
+  if (endpoint.includes('/leave') && method === 'POST') {
+    return { message: 'Left successfully' };
+  }
+
+  // 12. POST /api/rooms/{code}/end
+  if (endpoint.includes('/end') && method === 'POST') {
+    return { message: 'Room ended' };
+  }
+
+  // 13. GET /api/rooms/{code}/messages
+  if (endpoint.includes('/messages') && method === 'GET') {
+    if (endpoint.includes('before=')) {
+      return {
+        messages: [
+          {
+            id: 99,
+            senderId: 2,
+            senderName: 'Priya Sharma',
+            text: 'Shared the agenda on https://meetapp.com/agenda',
+            sentAt: new Date(Date.now() - 600000).toISOString()
+          }
+        ]
+      };
+    }
+    return {
+      messages: [
+        {
+          id: 101,
+          senderId: 2,
+          senderName: 'Priya Sharma',
+          text: 'Welcome everyone to the sprint review!',
+          sentAt: new Date(Date.now() - 300000).toISOString()
+        },
+        {
+          id: 102,
+          senderId: 3,
+          senderName: 'Aarav Patel',
+          text: 'Glad to be here. Audio is working well.',
+          sentAt: new Date(Date.now() - 180000).toISOString()
+        }
+      ]
+    };
+  }
+
   throw new ApiError(404, 'Not Found', `Mock endpoint ${method} ${endpoint} not found.`);
 }
 

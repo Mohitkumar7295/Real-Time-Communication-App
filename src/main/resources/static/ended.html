@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Ended — MeetApp</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <style>
+    .ended-card {
+      max-width: 440px;
+      margin: 80px auto;
+      padding: 32px 24px;
+      text-align: center;
+      background-color: var(--bg-surface, #FFFFFF);
+      border: 1px solid var(--border-color, #DDD8CD);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    .ended-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background-color: #F6F4EF;
+      color: var(--accent-green, #1F6F5B);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .ended-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-main, #1B1A17);
+      margin-bottom: 8px;
+    }
+    .ended-desc {
+      font-size: 14px;
+      color: var(--text-muted, #6B675F);
+      margin-bottom: 24px;
+    }
+    .btn-return-home {
+      display: inline-block;
+      width: 100%;
+      padding: 12px;
+      background-color: var(--accent-green, #1F6F5B);
+      color: #FFFFFF;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: background-color 0.2s ease;
+    }
+    .btn-return-home:hover {
+      background-color: var(--accent-green-hover, #17594A);
+    }
+  </style>
+</head>
+<body>
+  <div class="ended-card">
+    <div class="ended-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+    </div>
+    <h1 class="ended-title">You've left the meeting</h1>
+    <p class="ended-desc" id="endedReason">Thank you for collaborating with MeetApp.</p>
+    <a href="dashboard.html" class="btn-return-home">Back to Home</a>
+  </div>
+
+  <script type="module" src="js/ended.js"></script>
+</body>
+</html>

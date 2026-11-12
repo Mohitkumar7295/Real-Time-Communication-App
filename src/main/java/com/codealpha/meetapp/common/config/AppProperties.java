@@ -59,6 +59,18 @@ public class AppProperties {
 
     private String mailFrom = "onboarding@resend.dev";
 
+    private String aesKey;
+
+    private int chatRetentionDays = 30;
+
+    private int fileRetentionDays = 7;
+
+    private int maxRoomFiles = 20;
+
+    private int maxRoomStorageMb = 50;
+
+    private int maxConcurrentFileOps = 4;
+
     @PostConstruct
     public void validateOrigin() {
         if (allowedOrigin == null || allowedOrigin.isBlank()) {
@@ -210,6 +222,54 @@ public class AppProperties {
         this.mailFrom = mailFrom;
     }
 
+    public String getAesKey() {
+        return aesKey;
+    }
+
+    public void setAesKey(String aesKey) {
+        this.aesKey = aesKey;
+    }
+
+    public int getChatRetentionDays() {
+        return chatRetentionDays;
+    }
+
+    public void setChatRetentionDays(int chatRetentionDays) {
+        this.chatRetentionDays = chatRetentionDays;
+    }
+
+    public int getFileRetentionDays() {
+        return fileRetentionDays;
+    }
+
+    public void setFileRetentionDays(int fileRetentionDays) {
+        this.fileRetentionDays = fileRetentionDays;
+    }
+
+    public int getMaxRoomFiles() {
+        return maxRoomFiles;
+    }
+
+    public void setMaxRoomFiles(int maxRoomFiles) {
+        this.maxRoomFiles = maxRoomFiles;
+    }
+
+    public int getMaxRoomStorageMb() {
+        return maxRoomStorageMb;
+    }
+
+    public void setMaxRoomStorageMb(int maxRoomStorageMb) {
+        this.maxRoomStorageMb = maxRoomStorageMb;
+    }
+
+    public int getMaxConcurrentFileOps() {
+        return maxConcurrentFileOps;
+    }
+
+    public void setMaxConcurrentFileOps(int maxConcurrentFileOps) {
+        this.maxConcurrentFileOps = maxConcurrentFileOps;
+    }
+
     @Override
     public String toString() {
         return "AppProperties{" +
@@ -228,6 +288,12 @@ public class AppProperties {
                 ", emailProvider='" + emailProvider + '\'' +
                 ", resendApiKey=" + (resendApiKey != null && !resendApiKey.isBlank() ? "'****'" : "null") +
                 ", mailFrom='" + mailFrom + '\'' +
+                ", aesKey=" + (aesKey != null && !aesKey.isBlank() ? "'****'" : "null") +
+                ", chatRetentionDays=" + chatRetentionDays +
+                ", fileRetentionDays=" + fileRetentionDays +
+                ", maxRoomFiles=" + maxRoomFiles +
+                ", maxRoomStorageMb=" + maxRoomStorageMb +
+                ", maxConcurrentFileOps=" + maxConcurrentFileOps +
                 '}';
     }
 }

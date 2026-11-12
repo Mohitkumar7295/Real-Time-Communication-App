@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ready to join? — MeetApp</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <style>
+    .prejoin-container {
+      max-width: 580px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+    .preview-box {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      background-color: var(--tile-bg, #1B1A17);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .preview-box video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    .preview-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #2A2824;
+      color: #FFFFFF;
+      font-size: 28px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .mic-meter-wrapper {
+      height: 6px;
+      background-color: var(--border-color, #DDD8CD);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .mic-meter-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--accent-green, #1F6F5B);
+      transition: width 0.1s ease;
+    }
+    .device-controls-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .toggle-pill {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color, #DDD8CD);
+      border-radius: 8px;
+      background-color: var(--bg-surface, #FFFFFF);
+      color: var(--text-main, #1B1A17);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .toggle-pill.pill-off {
+      background-color: #FEE2E2;
+      border-color: #F87171;
+      color: #991B1B;
+    }
+    .room-summary-meta {
+      font-size: 14px;
+      color: var(--text-muted, #6B675F);
+      margin-bottom: 12px;
+    }
+    .btn-join-room {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--accent-green, #1F6F5B);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-join-room:hover {
+      background-color: var(--accent-green-hover, #17594A);
+    }
+    .btn-join-room:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="prejoin-container">
+    <header style="margin-bottom: 24px;">
+      <a href="dashboard.html" style="text-decoration: none; color: var(--accent-green, #1F6F5B); font-weight: 700; font-size: 20px;">MeetApp</a>
+      <h1 style="font-size: 24px; margin-top: 8px; font-weight: 700;">Ready to join?</h1>
+      <p class="room-summary-meta" id="roomSummaryText">Checking room status...</p>
+    </header>
+
+    <div class="preview-box">
+      <video id="previewVideo" autoplay playsinline muted></video>
+      <div id="previewAvatar" class="preview-avatar">ME</div>
+    </div>
+
+    <!-- Microphone Level Meter -->
+    <div class="mic-meter-wrapper" title="Microphone Input Level">
+      <div class="mic-meter-fill" id="micMeterFill"></div>
+    </div>
+
+    <!-- Pre-meeting Mute Toggles -->
+    <div class="device-controls-row">
+      <button type="button" class="toggle-pill" id="btnTogglePrejoinMic">
+        <span id="labelPrejoinMic">Microphone On</span>
+      </button>
+      <button type="button" class="toggle-pill" id="btnTogglePrejoinCam">
+        <span id="labelPrejoinCam">Camera On</span>
+      </button>
+    </div>
+
+    <!-- Join Action -->
+    <button type="button" class="btn-join-room" id="btnJoinMeeting" disabled>
+      Join Meeting
+    </button>
+  </div>
+
+  <script type="module" src="js/prejoin.js"></script>
+</body>
+</html>

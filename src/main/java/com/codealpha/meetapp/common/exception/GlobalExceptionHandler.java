@@ -39,8 +39,8 @@ public class GlobalExceptionHandler {
         this.clock = clock;
     }
 
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiError> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
+    @ExceptionHandler({BadRequestException.class, IllegalArgumentException.class})
+    public ResponseEntity<ApiError> handleBadRequest(Exception ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
@@ -139,9 +139,10 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "HTTP method '" + ex.getMethod() + "' is not supported for this endpoint.", request);
     }
 
-    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<ApiError> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported media type.", request);
+    @ExceptionHandler({HttpMediaTypeNotSupportedException.class, UnsupportedMediaTypeException.class})
+    public ResponseEntity<ApiError> handleMediaTypeNotSupported(Exception ex, HttpServletRequest request) {
+        String message = (ex instanceof UnsupportedMediaTypeException) ? ex.getMessage() : "Unsupported media type.";
+        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, message, request);
     }
 
     @ExceptionHandler(ServiceUnavailableException.class)

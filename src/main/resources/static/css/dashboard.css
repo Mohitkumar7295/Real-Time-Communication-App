@@ -1,0 +1,449 @@
+/* ==========================================================================
+   MeetApp — Dashboard Stylesheet (dashboard.css)
+   Full-featured collaboration hub, week strip, action bar, dialogs
+   ========================================================================== */
+
+.dashboard-shell {
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+  padding-block: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* --------------------------------------------------------------------------
+   Hero Action Bar
+   -------------------------------------------------------------------------- */
+.action-hero {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.action-hero-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.action-hero-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  max-width: 440px;
+  min-width: 280px;
+}
+
+.join-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.join-input-wrap input {
+  width: 100%;
+  height: var(--touch-min);
+  padding: 0 var(--space-4);
+  padding-left: var(--space-10);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.join-input-wrap input:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+.join-input-icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Architecture & Trust Banner
+   -------------------------------------------------------------------------- */
+.trust-banner {
+  background-color: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.trust-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.trust-banner-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.btn-learn-more {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  min-height: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* --------------------------------------------------------------------------
+   Week Strip Component
+   -------------------------------------------------------------------------- */
+.week-strip-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.week-strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.week-strip-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  color: var(--ink);
+  margin: 0;
+}
+
+.week-nav-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.week-days-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+
+.day-pill {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-height: var(--touch-min);
+  position: relative;
+}
+
+.day-pill:hover {
+  border-color: var(--border-focus);
+}
+
+.day-pill.active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.day-pill-name {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.day-pill.active .day-pill-name {
+  color: var(--accent);
+}
+
+.day-pill-number {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.day-pill.active .day-pill-number {
+  color: var(--accent);
+}
+
+.day-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Meetings Feed & List
+   -------------------------------------------------------------------------- */
+.meetings-section {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.meetings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meetings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.meeting-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background-color: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  transition: border-color var(--transition-fast);
+}
+
+.meeting-card:hover {
+  border-color: var(--accent);
+}
+
+.meeting-card-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.meeting-time-box {
+  background: var(--surface-alt);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.meeting-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meeting-code-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+}
+
+.meeting-meta-line {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.meeting-status-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--success);
+  font-weight: 600;
+  font-size: var(--text-xs);
+}
+
+.meeting-status-ended {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* Empty State */
+.empty-meetings-state {
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.empty-meetings-icon {
+  color: var(--border);
+  margin-bottom: var(--space-2);
+}
+
+/* --------------------------------------------------------------------------
+   Accessible Dialogs / Modals
+   -------------------------------------------------------------------------- */
+.app-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  color: var(--ink);
+  padding: 0;
+  max-width: 540px;
+  width: 90vw;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
+}
+
+.app-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.dialog-header {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialog-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  margin: 0;
+  color: var(--ink);
+}
+
+.dialog-body {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.dialog-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  background-color: var(--surface-alt);
+}
+
+.btn-close-dialog {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-dialog:hover {
+  color: var(--ink);
+}
+
+/* Device Preview Area */
+.device-preview-box {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #000000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.device-preview-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.audio-meter-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.audio-meter-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.audio-meter-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--accent);
+  transition: width 80ms ease;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
+  .action-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .action-hero-left, .action-hero-right {
+    max-width: 100%;
+  }
+  .week-days-row {
+    gap: var(--space-1);
+  }
+  .meeting-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

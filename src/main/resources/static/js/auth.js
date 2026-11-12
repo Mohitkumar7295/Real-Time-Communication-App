@@ -607,8 +607,38 @@ function initDashboardPage() {
 
   const startMeetingBtn = document.getElementById('start-meeting-placeholder');
   if (startMeetingBtn) {
-    startMeetingBtn.addEventListener('click', () => {
-      alert('Meeting room creation will be connected in Phase 4.');
+    startMeetingBtn.addEventListener('click', async () => {
+      try {
+        startMeetingBtn.disabled = true;
+        startMeetingBtn.textContent = 'Creating room...';
+        const res = await apiRequest('/rooms', { method: 'POST' });
+        if (res && res.roomCode) {
+          window.location.href = `prejoin.html?code=${res.roomCode}`;
+        }
+      } catch (err) {
+        alert('Failed to create meeting: ' + (err.message || 'Error'));
+        startMeetingBtn.disabled = false;
+        startMeetingBtn.textContent = 'Start a new meeting';
+      }
+    });
+  }
+
+  const joinRoomBtn = document.getElementById('join-room-btn');
+  const joinRoomInput = document.getElementById('join-room-input');
+  if (joinRoomBtn && joinRoomInput) {
+    joinRoomBtn.addEventListener('click', () => {
+      const code = joinRoomInput.value.trim().toUpperCase();
+      if (!code) {
+        alert('Please enter a meeting code');
+        return;
+      }
+      window.location.href = `prejoin.html?code=${encodeURIComponent(code)}`;
+    });
+
+    joinRoomInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        joinRoomBtn.click();
+      }
     });
   }
 }

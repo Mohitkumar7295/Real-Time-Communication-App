@@ -24,7 +24,7 @@
 - **FR-3 (Login Step 1):** Valid credentials generate a 6-digit email OTP challenge; no JWT is issued.
 - **FR-3A (Login Step 2):** Validating OTP issues a 24h JWT. 5 failed attempts locks challenge; OTP expires in 5 min.
 - **FR-3B (OTP Resend):** Resending OTP requires 60s cooldown, capped at 3 resends per challenge.
-- *Dev Mode Note:* In dev profile, OTP is printed to app logs for testing without SMTP; strictly forbidden in prod.
+- *Dev Mode Note:* In dev profile, OTP is printed to app logs for testing without live Resend API; strictly forbidden in prod.
 - **Acceptance Criteria:**
   - *AC-1.1 (Register):* **Given** valid details, **when** user registers, **then** account is saved and login page loads.
   - *AC-1.2 (Step 1 Login):* **Given** valid credentials, **when** user submits login, **then** 6-digit OTP is sent and challenge ID returned without JWT.
@@ -34,12 +34,24 @@
 
 ### A1. User Profile & Account Management
 - **FR-1A (Profile Management):** Authenticated users can view their profile details (`name`, `email`, `createdAt`), edit their display name (2–50 characters, trimmed; email is read-only), update their password (verifying current password with BCrypt, enforcing $\ge 8$ characters with letter and number, rejecting identical new passwords), and delete their account with password confirmation.
-- **FR-1B (Dashboard Home & Readiness):** Authenticated users land on a dashboard featuring a time-of-day greeting ("Good morning / afternoon / evening, {Name}"), two prominent primary actions (Start Meeting and Join with Code with client-side uppercase auto-trim validation), a "Recent meetings" table/list with empty-state guidance, and an on-demand "Before you join" camera/mic readiness tool with zero auto-prompting on load.
+- **FR-1B (Dashboard Home & Collaboration Hub):** Authenticated users land on a full-featured video-meeting home screen built with an original, lightweight design system (warm off-white palette `#F6F4EF`, surface `#FFFFFF`, ink `#1B1A17`, muted `#6B675F`, deep green accent `#1F6F5B`, 1px borders, Georgia-style serif headings, system sans body, dark mode via `prefers-color-scheme`):
+  1. **Top Bar:** Wordmark ("MeetApp"), code/link input with Join button (extracts and validates 6+ char code, disables Join until valid), New button with dropdown ("Start an instant meeting" and "Create a meeting link for later"), Help button, Settings button, and user account menu (initials avatar, name, Profile, and Log out). Fully keyboard accessible with Esc and outside-click dismissal.
+  2. **Left Navigation:** Desktop left nav / mobile bottom bar with "Meetings" (active) and "Profile".
+  3. **Greeting:** Time-of-day greeting ("Good morning / afternoon / evening, {Name}") positioned above the week strip.
+  4. **Week Strip:** Sunday to Saturday calendar strip in the user's local timezone with the selected day highlighted, previous/next week navigation arrows, a "Today" button, and indicators for days with meeting history. Selecting a day filters the meetings list.
+  5. **Information Banner:** Dismissible banner (persisted per tab via `sessionStorage`) with honest privacy/encryption notes ("Only signed-in people with your meeting code can join. Rooms hold up to 5 people, and video is encrypted between participants.") and a "Learn more" modal with 3 plain facts.
+  6. **Meetings List & Empty State:** Lists meetings for selected day (code, time, role [Host/Guest], status [Active/Ended], Copy link, and Rejoin button for active rooms). Includes loading skeleton, error retry, and custom original SVG empty state illustration with headline and primary New button.
+  7. **Room Created Modal:** Modal dialog displayed after creating a meeting showing room code, shareable link, Copy code, Copy link, and Open button (disabled until room page is deployed).
+  8. **Device Check Dialog:** Accessible modal opened via Settings button offering camera preview, mic level bar, device selectors, hardware status, and clean track release upon modal closure. Zero auto-prompts on page load.
+  9. **Help Dialog:** Accessible modal with 4 plain-language usage tips.
 - **Acceptance Criteria:**
   - *AC-1.6 (Profile Update):* **Given** authenticated user, **when** updating name to 2–50 characters, **then** name updates in database, success message appears, and layout header avatar/name reflects the change.
   - *AC-1.7 (Change Password):* **Given** authenticated user, **when** submitting correct current password and valid different new password, **then** password updates, fields clear, and success message displays. Wrong current password returns 401; identical password returns 400.
   - *AC-1.8 (Account Deletion):* **Given** authenticated user, **when** providing correct password and confirmation, **then** user record and cascading data are deleted, session is destroyed, and user redirects to landing page. If user hosts an active room, returns 409 Conflict.
-  - *AC-1.9 (Dashboard & Device Check):* **Given** dashboard user, **when** clicking "Check devices", **then** browser prompts for media permission on demand, displays live permission and hardware status (allowed, blocked, or not found), and releases tracks immediately.
+  - *AC-1.9 (Dashboard & Device Check):* **Given** dashboard user, **when** clicking Settings/Check devices, **then** browser prompts for media permission on demand, displays live permission and hardware status (allowed, blocked, or not found), and releases tracks immediately on dialog close.
+  - *AC-1.10 (Week Strip Navigation):* **Given** home page user, **when** selecting different days in the week strip, **then** the meetings list updates to reflect meetings for that date; navigating with prev/next/today shifts week boundaries seamlessly across months and years.
+  - *AC-1.11 (Code/Link Entry):* **Given** home page user, **when** typing or pasting a bare code (e.g. `ABC-DEF`) or full link (e.g. `room.html?code=ABC-DEF`), **then** the code is trimmed, uppercased, and validated before enabling the Join button.
+  - *AC-1.12 (Create Meeting Link):* **Given** home page user, **when** selecting "Create a meeting link for later" or "Start an instant meeting", **then** a room is generated and a modal surfaces the code, shareable link, and copy utilities. Room participant row is only created when a user actually enters the room.
 
 ### B. Room Management
 - **FR-4:** Users must create rooms with unique alphanumeric codes and join via code or URL (`/room/{code}`).

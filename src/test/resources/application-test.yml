@@ -28,3 +28,9 @@ app:
   jwt-expiry-minutes: 1440
   email-provider: log
   otp-pepper: default-otp-pepper-secret-value-32chars
+  aes-key: k7x8V9uN1Z3pQ4yL6wE2mR0tS8vK5jH1bF4cO9aP3qE=
+  chat-retention-days: 30
+  file-retention-days: 7
+  max-room-files: 20
+  max-room-storage-mb: 50
+  max-concurrent-file-ops: 4

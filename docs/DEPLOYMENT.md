@@ -1,156 +1,169 @@
 # MeetApp — Deployment Guide (DEPLOYMENT.md)
 
 ## 1. Overview & Production Architecture
-MeetApp is packaged as a lightweight Docker container and deployed to cloud PaaS providers (Render or Railway). The application connects to a managed PostgreSQL database over an encrypted SSL connection, with external STUN/TURN servers facilitating WebRTC media traversal across restrictive client firewalls.
+MeetApp is packaged as a lightweight, production-hardened Docker container deployed to **Render** as a single, unified Web Service. The service serves both the Spring Boot 3 backend (REST API, WebSocket signaling, and static assets) and the plain HTML5/CSS/JavaScript frontend from the same origin. The backend connects to an external managed **Supabase PostgreSQL** database over an SSL-encrypted connection, with external STUN/TURN servers facilitating WebRTC media traversal across restrictive client firewalls.
 
 ```mermaid
 graph TD
-    Client["Client Browser (HTTPS / WSS)"] --> CDN["Cloud Platform Edge (Render / Railway)"]
-    CDN --> Container["Spring Boot 3 Docker Container (:8080)"]
-    Container --> DB[("PostgreSQL (sslmode=require)")]
+    Client["Client Browser (HTTPS / WSS)"] --> Cloudflare["Render Edge Proxy (Cloudflare / Load Balancer)"]
+    Cloudflare -->|"X-Forwarded-For / Proto"| Container["Spring Boot 3 Docker Container (PORT)"]
+    Container -->|"Flyway & JPA (sslmode=require)"| Supabase[("Supabase PostgreSQL (Session Pooler :5432)")]
     Container --> LocalDisk[("Ephemeral Storage (/uploads)")]
     Client -.->|"WebRTC Relay"| TurnServer["Metered / Twilio TURN Server"]
-    Client <-->|"P2P Mesh Media"| PeerClient["Remote Peer Browser"]
+    Client <-->|"Direct P2P Mesh Media"| PeerClient["Remote Peer Browser"]
 ```
 
 ---
 
-## 2. Pre-Deployment Checklist
-- [ ] All unit and integration tests pass cleanly (`mvn clean test`).
-- [ ] Repository is clean with no hardcoded credentials or `.env` files committed.
-- [ ] Production profile (`application-prod.yml`) references environment variables.
-- [ ] Flyway migration scripts (`V1` to `V6`) validated against a clean PostgreSQL instance.
-- [ ] Free-tier TURN server credentials obtained and verified.
+## 2. Production Design & Architecture Decisions
 
----
+### 2.1 Unified Single-Origin Service (Recommended)
+- **Architecture:** A single Render Web Service serves the Spring Boot REST API, WebSocket signaling (`/ws`), and static frontend assets (`src/main/resources/static/`).
+- **Advantages:**
+  - **Zero Cross-Origin Friction:** API calls (`/api/...`) and WebSocket upgrades (`/ws`) are strictly same-origin. Preflight `OPTIONS` overhead is eliminated.
+  - **Eliminates WebSocket Origin Mismatches:** Handshake origin checking matches the server's own host without brittle cross-domain configuration.
+  - **Single Artifact & Single Deployment:** Frontend and backend code are built and versioned together in a single Docker image, guaranteeing zero contract skew.
+  - **Resource Efficiency:** Free-tier usage is consolidated within a single service, consuming only one instance-hour pool (750 hours/month) instead of two.
 
-## 3. Environment Variables
-All production configuration is supplied via platform environment variables:
+### 2.2 Production Database: Supabase PostgreSQL
+- **Environment Isolation:** A dedicated production Supabase project completely separate from development/testing databases.
+- **Connection Method:** Connect via Supabase's **Session Pooler** (IPv4-compatible pooler host on port **5432**) with `?sslmode=require`. Session pooling is required because Flyway schema migrations and JPA schema validation require prepared statements and session-level locks (`pg_locks`), which fail or behave unpredictably under transaction pooling (`pgbouncer` in transaction mode on port 6543).
+- **Least-Privilege User:** Use a dedicated database user (or schema-restricted role) for application runtime where practical.
+- **Automated Migrations:** Flyway runs automatically on startup in production, validating and applying migrations (`V1` to `V11`) safely before the application accepts traffic.
 
-| Variable | Purpose | Example Placeholder | Required | Secret? |
-| :--- | :--- | :--- | :---: | :---: |
-| `DB_URL` | PostgreSQL JDBC connection string | `jdbc:postgresql://db.example.com:5432/meetapp?sslmode=require` | Yes | No |
-| `DB_USER` | Database username | `meetapp_user` | Yes | No |
-| `DB_PASSWORD` | Database password | `[PLACEHOLDER: DB_PASSWORD]` | Yes | Yes |
-| `JWT_SECRET` | 256-bit key for signing tokens | `[PLACEHOLDER: JWT_SECRET_256_BITS]` | Yes | Yes |
-| `APP_ALLOWED_ORIGIN` | Authorized client domain for CORS | `https://meetapp.onrender.com` | Yes | No |
-| `UPLOAD_DIR` | Directory for shared files | `/uploads` | Yes | No |
-| `STUN_URLS` | STUN server URLs | `stun:stun.l.google.com:19302` | Yes | No |
-| `TURN_URL` | TURN relay server URL | `turn:relay.metered.ca:443` | No | No |
-| `TURN_USERNAME` | TURN authentication username | `meetapp-turn-user` | No | No |
-| `TURN_CREDENTIAL` | TURN authentication credential | `[PLACEHOLDER: TURN_CREDENTIAL]` | No | Yes |
+### 2.3 Region Selection: Singapore (`singapore`)
+- **Developer / Primary Target Location:** India.
+- **Render Available Regions:** Oregon (US), Ohio (US), Virginia (US), Frankfurt (Germany), Singapore (Southeast Asia).
+- **Recommendation:** **Singapore (`singapore`)**.
+- **Latency & Signaling Impact:**
+  - Round-trip time (RTT) from India to Singapore is **30–50 ms**, compared to **120–160 ms** to Frankfurt and **180–250 ms** to US regions.
+  - While WebRTC audio/video media flows peer-to-peer (or via TURN) after connection establishment, all room discovery, ticket issuance, SDP offer/answer exchanges, and ICE candidate trickling flow through the signaling server over WebSocket.
+  - Low signaling latency ensures call setup, track renegotiation (e.g. starting a screen share), chat delivery, and whiteboard drawing synchronization feel instantaneous without perceptible lag.
 
----
+### 2.4 Render Free Plan Specifications & Operational Behavior
+Render's official Free Web Service limits and their direct effects on MeetApp:
 
-## 4. Docker Container Packaging
-The project uses a multi-stage `Dockerfile`:
-1. **Builder Stage:** Compiles the application using Maven and Eclipse Temurin 17 JDK.
-2. **Runtime Stage:** Copies the fat JAR into an Alpine Linux JRE image, executes under a non-root user, exposes port 8080, and checks health via `/actuator/health`.
-
-### Local Build & Test Commands
-```bash
-docker build -t meetapp:latest .
-docker run -p 8080:8080 --env-file .env meetapp:latest
-```
-
----
-
-## 5. Step-by-Step Deployment: Render
-1. Sign in to [Render](https://render.com) and click **New + > Web Service**.
-2. Connect your GitHub repository: `https://github.com/Mohitkumar7295/Real-Time-Communication-App`.
-3. Configure service:
-   - **Environment:** `Docker`
-   - **Region:** Nearest to your target users (e.g., Oregon or Frankfurt).
-   - **Instance Type:** `Free`.
-4. Under **Advanced > Environment Variables**, add each variable from Section 3.
-5. Set **Health Check Path** to `/actuator/health`.
-6. Click **Create Web Service**. Render builds the image and deploys.
-
----
-
-## 6. Step-by-Step Deployment: Railway (Alternative)
-1. Sign in to [Railway](https://railway.app) and select **New Project > Deploy from GitHub repo**.
-2. Select the MeetApp repository.
-3. In the service settings, navigate to **Variables** and add the required environment variables.
-4. Set **Healthcheck Path** to `/actuator/health`.
-5. Railway automatically detects the `Dockerfile`, triggers the build, and generates a public HTTPS URL.
-
----
-
-## 7. Production Database Setup
-1. Provision a PostgreSQL 15+ database on your chosen cloud provider (e.g., Railway Postgres, Neon, Supabase, or AWS RDS).
-2. Obtain connection parameters and construct the JDBC string:  
-   `jdbc:postgresql://<HOST>:<PORT>/<DATABASE>?sslmode=require`
-3. Flyway executes automatically on initial container startup, creating all tables and indexes.
-4. Verify database connectivity: Ensure network security rules permit inbound JDBC traffic from your app deployment.
-
----
-
-## 8. TURN Server Setup
-Direct WebRTC P2P fails when both users are behind symmetric NATs or corporate firewalls.
-1. Obtain free TURN relay credentials from providers like [Metered.ca](https://www.metered.ca/) or Twilio.
-2. Set `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` in the cloud host dashboard.
-3. Test traversal by joining the room from two separate physical networks (e.g., home Wi-Fi and mobile 4G).
-
----
-
-## 9. HTTPS, WSS & Proxy Settings
-- Render and Railway provide managed TLS certificates automatically.
-- WebSocket handshakes upgrade seamlessly over `wss://<DOMAIN>/ws?token=<JWT>&room=<code>`.
-- *Proxy Keep-Alive:* Cloud edge proxies terminate idle WebSockets after 60–100 seconds of silence. MeetApp's `socket.js` client emits periodic heartbeat pings every 30 seconds to maintain persistent connections.
-
----
-
-## 10. File Storage & Cloud Limitations
-- On free-tier container instances, files uploaded to `/uploads` reside on ephemeral disk storage and are lost during container restarts or redeployments.
-- For permanent production workloads, implement `StorageService` using Amazon S3 or Cloudflare R2.
-- *Notice:* Inform demo reviewers that room file attachments are temporary.
-
----
-
-## 11. Free-Tier Sleeping & Pre-Warming
-- Free instances sleep after 15 minutes of inactivity.
-- The first request incurs a 45–60 second cold start delay while the container spins up.
-- *Pre-Warm:* Before conducting a live demo or evaluation, access `https://<APP_URL>/actuator/health` to wake the service.
-
----
-
-## 12. Post-Deployment Smoke Test
-1. Access `https://<APP_URL>` over HTTPS; verify landing page renders.
-2. Register a new user and confirm redirect to login.
-3. Log in, verify JWT storage, and create a meeting from the dashboard.
-4. Open a second device on mobile 4G, join with the room code, and confirm bidirectional video.
-5. Initiate screen share from desktop; verify mobile receives display feed.
-6. Upload a 1 MB PDF and download from the second device.
-7. Draw on whiteboard; verify synchronized strokes.
-
----
-
-## 13. Rollback & Redeploy
-- **Redeploy:** Trigger manual redeploy from Render/Railway dashboard.
-- **Rollback:** In the deployments list, select the previous successful build and click **Rollback**.
-
----
-
-## 14. Monitoring & Troubleshooting
-View container logs in the cloud dashboard under the **Logs** tab.
-
-| Symptom | Likely Cause | Fix |
+| Metric / Feature | Render Free Tier Specification | Impact on MeetApp & Mitigation |
 | :--- | :--- | :--- |
-| **502 Bad Gateway** | Container failed to start / port mismatch | Verify container listens on port 8080 and `/actuator/health` is UP. |
-| **Connection Refused (DB)** | Database host sleeping or bad URL | Verify host address and credentials in `DB_URL`. |
-| **SSL Handshake Error** | Missing SSL parameter | Ensure `?sslmode=require` is appended to `DB_URL`. |
-| **WebSocket 1008 Close** | Invalid JWT or room full | Check client token validity and participant limits. |
-| **Video Fails Cross-Network**| Symmetric NAT blocking direct P2P | Configure valid TURN credentials in platform environment. |
-| **CORS Block** | Mismatched allowed origin | Set `APP_ALLOWED_ORIGIN` to exact public HTTPS domain. |
-| **Camera Blocked** | Insecure context (HTTP) | Ensure site is accessed exclusively over `https://`. |
+| **RAM / CPU** | **512 MB RAM**, shared CPU (~0.1 CPU core). | JVM memory must be tightly constrained. Configured `-XX:MaxRAMPercentage=75.0` (~384 MB heap) leaving ~128 MB for Metaspace, threads, and OS buffers to prevent Linux OOM killer (exit code 137). |
+| **Inactivity Spindown** | Service spins down (sleeps) after **15 minutes** of no incoming HTTP traffic or WebSocket activity. | The first user request after sleep triggers a cold start (**50–60 seconds**) while the container starts up. Pre-warming via `/actuator/health` is advised prior to live demos. |
+| **Monthly Uptime Hours**| **750 free instance hours** per month per workspace. | Running a single free service consumes at most 744 hours in a 31-day month, fitting within the free allocation. |
+| **Build Minutes** | **500 build minutes** per month. | Multi-stage Docker build caches Maven dependencies, keeping subsequent builds fast (typically 1–2 minutes). |
+| **Volatile Storage** | Local container filesystem (`/uploads`) is **ephemeral**. | Any service restart, sleep spindown, or new deploy wipes locally stored uploads. Metadata remains in the database, but binary files are temporary. Documented in user README. |
+| **In-Memory Signaling** | In-memory room registries, active whiteboard strokes, and WebSocket tickets reside in RAM. | A service restart or redeploy resets active room signaling and in-progress whiteboard canvases. Users must re-create/re-join rooms upon container recovery. |
 
 ---
 
-## 15. Production Security Checklist
-- [ ] Secrets injected via dashboard environment variables (never committed to Git).
-- [ ] Actuator restricted strictly to `/actuator/health`.
-- [ ] Detailed stack traces suppressed in error responses.
-- [ ] CORS restricted strictly to public frontend origin.
-- [ ] Strong random 256-bit JWT secret configured.
-- [ ] Forwarded Headers & Reverse Proxy: Configure host forwarded headers (`server.forwarded-header-strategy=framework`) so IP-based rate limiting accurately resolves the client IP behind reverse proxies without trusting unverified client `X-Forwarded-For` headers.
+## 3. Environment Variables Reference
+
+All production configuration is supplied securely via Render environment variables. Secrets are entered directly in the Render Dashboard (or marked `sync: false` in Blueprints) and are **never** committed to version control.
+
+| Variable | Purpose | Secret? | Required | Production Value / Example Placeholder |
+| :--- | :--- | :---: | :---: | :--- |
+| `PORT` | HTTP port provided by Render's runtime | No | Auto | Provided automatically by Render (defaults to `10000`) |
+| `SPRING_PROFILES_ACTIVE` | Activates production Spring configuration | No | Yes | `prod` |
+| `DB_URL` | PostgreSQL JDBC connection URL | No | Yes | `jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require` |
+| `DB_USER` | Database username | No | Yes | `postgres.yourprojectref` |
+| `DB_PASSWORD` | Database password | **Yes** | Yes | `[PLACEHOLDER: DB_PASSWORD]` |
+| `JWT_SECRET` | 256-bit signing key for authentication tokens | **Yes** | Yes | `[PLACEHOLDER: JWT_SECRET_256_BITS_MIN_32_CHARS]` |
+| `OTP_PEPPER` | 256-bit pepper for hashing login OTPs at rest | **Yes** | Yes | `[PLACEHOLDER: OTP_PEPPER_SECRET_32_CHARS]` |
+| `AES_KEY` | Base64-encoded 256-bit key for AES-GCM encryption | **Yes** | Yes | `[PLACEHOLDER: BASE64_AES_KEY_32_BYTES]` |
+| `APP_ALLOWED_ORIGIN` | Public HTTPS domain assigned by Render | No | Yes | `https://meetapp-xyz.onrender.com` |
+| `EMAIL_PROVIDER` | Email delivery provider (`resend` in production) | No | Yes | `resend` |
+| `RESEND_API_KEY` | API key for Resend transactional email API | **Yes** | Yes | `[PLACEHOLDER: re_dummy_resend_api_key]` |
+| `MAIL_FROM` | Verified sender email address for OTPs | No | Yes | `onboarding@resend.dev` (or verified custom domain) |
+| `UPLOAD_DIR` | Directory path for ephemeral file storage | No | No | `uploads` |
+| `MAX_FILE_SIZE_MB` | Maximum allowed individual upload size | No | No | `10` |
+| `MAX_ROOM_STORAGE_MB`| Maximum cumulative upload quota per room | No | No | `50` |
+| `MAX_ROOM_FILES` | Maximum total files per room | No | No | `20` |
+| `MAX_ROOM_PARTICIPANTS`| Maximum concurrent participants per room | No | No | `5` |
+| `STUN_URLS` | Comma-separated STUN server addresses | No | No | `stun:stun.l.google.com:19302` |
+| `TURN_URL` | Comma-separated TURN server addresses | No | No | `turn:relay.metered.ca:443?transport=tcp` |
+| `TURN_USERNAME` | TURN relay username | No | No | `meetapp-turn-user` |
+| `TURN_CREDENTIAL` | TURN relay authentication credential | **Yes** | No | `[PLACEHOLDER: TURN_CREDENTIAL]` |
+
+---
+
+## 4. Reverse Proxy & Forwarded Headers Configuration
+
+### 4.1 Threat Model & Reverse Proxy Mechanics
+Render routes external client traffic through Cloudflare and internal load balancers before terminating at the container:
+1. The TCP socket connection arriving at the Spring Boot application originates from Render's internal proxy IP.
+2. Render forwards client identity via standard HTTP request headers:
+   - `X-Forwarded-For`: Contains client IP followed by intermediate proxy IPs (`<client-ip>, <proxy-1>`).
+   - `X-Forwarded-Proto`: Set to `https`.
+   - `X-Forwarded-Port`: Set to `443`.
+3. **Risks if Unconfigured:**
+   - *Rate-Limiting Denial of Service:* Without forwarded header processing, `request.getRemoteAddr()` returns the internal proxy IP. All users globally share the same IP, meaning 5 failed logins by one user would lock out all users globally.
+   - *IP Spoofing Risk:* Blindly reading unverified headers allows malicious clients to spoof client IP and bypass rate limits.
+
+### 4.2 Safe Spring Boot Strategy
+Configure Spring Boot's native header strategy:
+```yaml
+server:
+  forwarded-header-strategy: framework
+```
+- Setting `server.forwarded-header-strategy: framework` registers Spring's `ForwardedHeaderFilter`.
+- The filter extracts the leftmost client IP from `X-Forwarded-For` and updates `HttpServletRequest.getRemoteAddr()`, `getScheme()`, and `getServerPort()`.
+- Rate limiters and security audits consistently read the genuine client IP without custom parsing code.
+
+---
+
+## 5. Health Check & Build Configuration
+
+- **Health Check Path:** `/actuator/health`
+- **Expected Status:** HTTP `200 OK` with JSON `{"status":"UP"}`.
+- **Probe Design:** Fast, non-blocking health check. Database liveness is validated during startup via Flyway; `/actuator/health` acts as a responsive liveness probe that prevents premature container termination during temporary database latency spikes.
+- **Container Build Command:**
+  - Automated via multi-stage `Dockerfile`.
+- **Container Runtime Command:**
+  ```bash
+  java -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom -jar app.jar
+  ```
+- **Port Binding:** Reads dynamic `$PORT` environment variable injected by Render, defaulting to `8080` locally and `10000` on Render.
+
+---
+
+## 6. Blueprint Configuration (`render.yaml`)
+Render Blueprints support Docker-based web services with non-sensitive variables declared in code and sensitive credentials guarded via `sync: false`:
+
+```yaml
+services:
+  - type: web
+    name: meetapp
+    runtime: docker
+    plan: free
+    region: singapore
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: OTP_PEPPER
+        sync: false
+      - key: AES_KEY
+        sync: false
+      - key: APP_ALLOWED_ORIGIN
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        value: onboarding@resend.dev
+      - key: STUN_URLS
+        value: stun:stun.l.google.com:19302
+      - key: TURN_URL
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false
+```

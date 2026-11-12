@@ -1,7 +1,6 @@
 package com.codealpha.meetapp.security;
 
 import com.codealpha.meetapp.common.config.AppProperties;
-import com.codealpha.meetapp.common.controller.PingController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,11 +38,11 @@ class SecurityIntegrationTest {
     private AppProperties appProperties;
 
     @Test
-    @DisplayName("GET /api/ping is public and accessible without authentication")
-    void ping_isPublic() throws Exception {
-        mockMvc.perform(get("/api/ping"))
+    @DisplayName("GET /actuator/health is public and accessible without authentication")
+    void health_isPublic() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ok"));
+                .andExpect(jsonPath("$.status").value("UP"));
     }
 
     @Test
@@ -83,7 +82,7 @@ class SecurityIntegrationTest {
     @Test
     @DisplayName("Security headers (HSTS, nosniff, FrameOptions DENY, strict referrer) are present")
     void securityHeaders_areEnforced() throws Exception {
-        mockMvc.perform(get("/api/ping").secure(true))
+        mockMvc.perform(get("/actuator/health").secure(true))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
@@ -96,7 +95,7 @@ class SecurityIntegrationTest {
     void corsPreflight_allowedOrigin_succeeds() throws Exception {
         String allowedOrigin = appProperties.getAllowedOrigin();
 
-        mockMvc.perform(options("/api/ping")
+        mockMvc.perform(options("/api/test-protected")
                         .header(HttpHeaders.ORIGIN, allowedOrigin)
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization,Content-Type"))
@@ -109,7 +108,7 @@ class SecurityIntegrationTest {
     @Test
     @DisplayName("CORS preflight through Spring Security chain rejects disallowed origin with 403")
     void corsPreflight_disallowedOrigin_rejected() throws Exception {
-        mockMvc.perform(options("/api/ping")
+        mockMvc.perform(options("/api/test-protected")
                         .header(HttpHeaders.ORIGIN, "http://untrusted-site.com")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET"))
                 .andExpect(status().isForbidden())

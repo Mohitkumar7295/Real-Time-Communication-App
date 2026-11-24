@@ -365,7 +365,7 @@ meetapp/
 | Package | Component | Responsibility | Depends On | Technology |
 | :--- | :--- | :--- | :--- | :--- |
 | `common` | `GlobalExceptionHandler`, `CorsConfig` | Catches exceptions and maps to uniform `ApiError`; sets CORS headers. | None | Spring MVC, Jackson |
-| `security` | `JwtService`, `JwtAuthFilter` | Generates/validates JWTs; filters HTTP requests; checks WS handshake. | `CustomUserDetailsService` | JJWT, Spring Security |
+| `security` | `JwtService`, `JwtAuthFilter` | Generates/validates JWTs; filters HTTP requests; validates `ver` claim against DB `token_version`; evicts revoked sessions. | `UserRepository` | JJWT, Spring Security |
 | `auth` | `AuthController`, `AuthService` | User registration, credential check, OTP challenge initiation, token issuance. | `UserService`, `OtpService`, `JwtService` | Spring Web, BCrypt |
 | `otp` | `OtpService`, `OtpGenerator`, `OtpChallengeRepository` | SecureRandom 6-digit OTP generation, SHA-256 hashing at rest, expiry/attempt validation. | `EmailService` | Spring Data JPA, SecureRandom |
 | `email` | `EmailService`, `ResendEmailService`, `LogEmailService` | Resend HTTPS API delivery of OTP verification emails; console logging in dev profile. | None | Spring RestClient, Resend API |

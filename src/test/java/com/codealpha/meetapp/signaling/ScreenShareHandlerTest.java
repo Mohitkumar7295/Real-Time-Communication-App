@@ -78,7 +78,7 @@ class ScreenShareHandlerTest {
         attrs.put("roomCode", roomCode);
         attrs.put("name", name);
         when(session.getAttributes()).thenReturn(attrs);
-        when(session.getUri()).thenReturn(URI.create("http://localhost:8080/ws?room=" + roomCode));
+        when(session.getUri()).thenReturn(URI.create("http://localhost:8080/ws?code=" + roomCode));
         return session;
     }
 

@@ -1,7 +1,9 @@
 package com.codealpha.meetapp.security;
 
+import com.codealpha.meetapp.common.config.AppProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -18,10 +20,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * Spring Security configuration:
  * - Stateless authentication with JWT Bearer tokens
  * - CSRF disabled (stateless token authentication without session cookies)
- * - Public routes: /api/auth/**, /api/ping, /actuator/health, and static frontend assets
- * - Protected routes: all other /api/** endpoints
- * - Uniform ApiError handling for 401 Unauthorized and 403 Forbidden
- * - Security headers: HSTS, nosniff, FrameOptions DENY, strict referrer policy
+ * - Strict route authorization chain ending in anyRequest().denyAll()
+ * - Security headers: HSTS, nosniff, FrameOptions DENY, strict referrer policy,
+ *   strict Content-Security-Policy (CSP), and Permissions-Policy
  */
 @Configuration
 @EnableWebSecurity
@@ -31,20 +32,46 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final AppProperties appProperties;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                           RestAuthenticationEntryPoint authenticationEntryPoint,
                           RestAccessDeniedHandler accessDeniedHandler,
-                          CorsConfigurationSource corsConfigurationSource) {
+                          CorsConfigurationSource corsConfigurationSource,
+                          AppProperties appProperties) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.appProperties = appProperties;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10);
+    }
+
+    private String buildCspPolicy() {
+        String origin = appProperties != null ? appProperties.getAllowedOrigin() : null;
+        String wsOrigin = "";
+        if (origin != null && !origin.isBlank()) {
+            String trimmed = origin.trim();
+            if (trimmed.startsWith("https://")) {
+                wsOrigin = " wss://" + trimmed.substring(8);
+            } else if (trimmed.startsWith("http://")) {
+                wsOrigin = " ws://" + trimmed.substring(7);
+            }
+        }
+        return "default-src 'self'; " +
+                "script-src 'self'; " +
+                "style-src 'self'; " +
+                "img-src 'self' data: blob:; " +
+                "media-src 'self' blob:; " +
+                "connect-src 'self'" + wsOrigin + "; " +
+                "frame-ancestors 'none'; " +
+                "object-src 'none'; " +
+                "base-uri 'self'; " +
+                "form-action 'self'";
     }
 
     @Bean
@@ -57,8 +84,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        .requestMatchers("/actuator/**").denyAll()
                         .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
+                        .requestMatchers(
+                                "/", "/index.html", "/login.html", "/signup.html", "/dashboard.html",
+                                "/prejoin.html", "/room.html", "/ended.html", "/css/**", "/js/**",
+                                "/favicon.ico", "/ws"
+                        ).permitAll()
+                        .anyRequest().denyAll()
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -69,10 +102,14 @@ public class SecurityConfig {
                                 .maxAgeInSeconds(31536000)
                                 .includeSubDomains(true)
                         )
-                        .contentTypeOptions(org.springframework.security.config.Customizer.withDefaults())
+                        .contentTypeOptions(Customizer.withDefaults())
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                         .referrerPolicy(referrer -> referrer
                                 .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+                        )
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(buildCspPolicy()))
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("camera=(self), microphone=(self), display-capture=(self)")
                         )
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

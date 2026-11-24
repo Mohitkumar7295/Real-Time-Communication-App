@@ -80,14 +80,32 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("Security headers (HSTS, nosniff, FrameOptions DENY, strict referrer) are present")
+    @DisplayName("Security headers (HSTS, nosniff, FrameOptions DENY, strict referrer, CSP, Permissions-Policy) are present")
     void securityHeaders_areEnforced() throws Exception {
         mockMvc.perform(get("/actuator/health").secure(true))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
-                .andExpect(header().string("Strict-Transport-Security", containsString("max-age=31536000")));
+                .andExpect(header().string("Strict-Transport-Security", containsString("max-age=31536000")))
+                .andExpect(header().string("Content-Security-Policy", containsString("default-src 'self'")))
+                .andExpect(header().string("Content-Security-Policy", containsString("style-src 'self'")))
+                .andExpect(header().string("Content-Security-Policy", containsString("frame-ancestors 'none'")))
+                .andExpect(header().string("Permissions-Policy", "camera=(self), microphone=(self), display-capture=(self)"));
+    }
+
+    @Test
+    @DisplayName("Unauthenticated GET /actuator/info is denied with 401 or 403")
+    void actuatorInfo_isDenied() throws Exception {
+        mockMvc.perform(get("/actuator/info"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Unauthenticated request to random path is denied with 401 or 403")
+    void randomPath_isDenied() throws Exception {
+        mockMvc.perform(get("/some-random-unknown-path"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

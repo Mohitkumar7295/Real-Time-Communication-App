@@ -14,7 +14,7 @@
       <div class="room-header-left">
         <a href="dashboard.html" class="room-brand" aria-label="MeetApp Home">MeetApp</a>
         <div class="room-code-badge">
-          <span id="roomCodeDisplay">DEMO1001</span>
+          <span id="roomCodeDisplay">K7M2QX9P</span>
           <button type="button" id="btnCopyCode" class="btn-copy-code" title="Copy meeting code" aria-label="Copy meeting code">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -60,30 +60,30 @@
         <div class="panel-tabs-bar" role="tablist" aria-label="Side panel sections">
           <button type="button" role="tab" class="panel-tab-btn active" id="tabBtnChat" aria-selected="true" aria-controls="chatTabPane">
             Messages
-            <span id="tabChatBadge" class="tab-badge" style="display: none;" aria-hidden="true">0</span>
+            <span id="tabChatBadge" class="tab-badge d-none" aria-hidden="true">0</span>
           </button>
           <button type="button" role="tab" class="panel-tab-btn" id="tabBtnFiles" aria-selected="false" aria-controls="filesTabPane">
             Files
-            <span id="tabFilesBadge" class="tab-badge" style="display: none;" aria-hidden="true">0</span>
+            <span id="tabFilesBadge" class="tab-badge d-none" aria-hidden="true">0</span>
           </button>
         </div>
 
         <!-- Messages Tab Pane -->
         <div class="tab-pane active" id="chatTabPane" role="tabpanel" aria-labelledby="tabBtnChat">
           <div class="chat-body" id="chatBody">
-            <div class="chat-load-earlier-wrap" id="loadEarlierWrap" style="display: none;">
+            <div class="chat-load-earlier-wrap d-none" id="loadEarlierWrap">
               <button type="button" class="btn-load-earlier" id="btnLoadEarlier">Load earlier messages</button>
             </div>
             <div class="chat-messages-list" id="chatMessagesList" role="log" aria-label="Chat messages list">
               <!-- Messages rendered dynamically with document.createElement (zero innerHTML) -->
             </div>
-            <button type="button" class="btn-jump-latest" id="btnJumpLatest" style="display: none;" aria-label="Jump to latest messages">
+            <button type="button" class="btn-jump-latest d-none" id="btnJumpLatest" aria-label="Jump to latest messages">
               New messages &darr;
             </button>
           </div>
 
           <div class="chat-footer">
-            <form class="chat-composer-form" id="chatComposerForm" onsubmit="return false;">
+            <form class="chat-composer-form" id="chatComposerForm">
               <div class="chat-input-wrapper">
                 <textarea id="chatInput" class="chat-input" placeholder="Send a message to everyone..." rows="1" maxlength="1000" aria-label="Send a message to everyone"></textarea>
                 <button type="submit" id="btnSendMessage" class="btn-send-message" aria-label="Send message" disabled>
@@ -102,7 +102,7 @@
         </div>
 
         <!-- Files Tab Pane -->
-        <div class="tab-pane" id="filesTabPane" role="tabpanel" aria-labelledby="tabBtnFiles" style="display: none;">
+        <div class="tab-pane d-none" id="filesTabPane" role="tabpanel" aria-labelledby="tabBtnFiles">
           <div class="files-body" id="filesBody">
             <!-- Drop zone -->
             <div class="file-drop-zone" id="fileDropZone" role="button" tabindex="0" aria-label="Upload file: drag and drop or click to browse">
@@ -121,13 +121,13 @@
             </div>
 
             <!-- Upload progress indicator -->
-            <div class="upload-progress-wrap" id="uploadProgressWrap" style="display: none;" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="upload-progress-wrap d-none" id="uploadProgressWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="upload-progress-info">
                 <span id="uploadFileName" class="upload-filename">Uploading...</span>
                 <span id="uploadProgressPercent" class="upload-percent">0%</span>
               </div>
               <div class="upload-progress-bar">
-                <div id="uploadProgressFill" class="upload-progress-fill" style="width: 0%;"></div>
+                <div id="uploadProgressFill" class="upload-progress-fill"></div>
               </div>
               <button type="button" id="btnCancelUpload" class="btn-cancel-upload" aria-label="Cancel file upload">Cancel</button>
             </div>
@@ -175,7 +175,7 @@
         <svg id="iconChat" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
-        <span id="chatUnreadBadge" class="chat-unread-badge" style="display: none;" aria-hidden="true">0</span>
+        <span id="chatUnreadBadge" class="chat-unread-badge d-none" aria-hidden="true">0</span>
       </button>
 
       <button type="button" class="tool-btn" id="btnToggleFiles" title="Files" aria-label="Files" aria-expanded="false" aria-controls="chatDrawer">
@@ -186,7 +186,7 @@
           <line x1="16" y1="17" x2="8" y2="17"></line>
           <polyline points="10 9 9 9 8 9"></polyline>
         </svg>
-        <span id="filesToolbarBadge" class="chat-unread-badge" style="display: none;" aria-hidden="true">0</span>
+        <span id="filesToolbarBadge" class="chat-unread-badge d-none" aria-hidden="true">0</span>
       </button>
 
       <button type="button" class="tool-btn" id="btnToggleWhiteboard" title="Whiteboard" aria-label="Whiteboard" aria-expanded="false" aria-controls="whiteboardOverlay">
@@ -202,14 +202,14 @@
         Leave
       </button>
 
-      <button type="button" class="tool-btn btn-end-all" id="btnEndAll" style="display: none;" title="End Meeting for All" aria-label="End Meeting for All">
+      <button type="button" class="tool-btn btn-end-all d-none" id="btnEndAll" title="End Meeting for All" aria-label="End Meeting for All">
         End All
       </button>
     </nav>
   </div>
 
   <!-- Collaborative Whiteboard Modal Overlay -->
-  <div id="whiteboardOverlay" class="whiteboard-overlay" style="display: none;" role="dialog" aria-modal="true" aria-label="Collaborative Whiteboard" aria-hidden="true" inert>
+  <div id="whiteboardOverlay" class="whiteboard-overlay d-none" role="dialog" aria-modal="true" aria-label="Collaborative Whiteboard" aria-hidden="true" inert>
     <!-- Whiteboard Header & Controls -->
     <header class="wb-header">
       <div class="wb-header-left">
@@ -253,12 +253,12 @@
 
           <!-- Color presets -->
           <div class="wb-color-presets" role="radiogroup" aria-label="Color choices">
-            <button type="button" class="wb-color-btn active" data-wb-color="#1F6F5B" style="background-color: #1F6F5B;" title="Pine Green" aria-label="Pine Green"></button>
-            <button type="button" class="wb-color-btn" data-wb-color="#2ECC71" style="background-color: #2ECC71;" title="Bright Green" aria-label="Bright Green"></button>
-            <button type="button" class="wb-color-btn" data-wb-color="#E74C3C" style="background-color: #E74C3C;" title="Coral Red" aria-label="Coral Red"></button>
-            <button type="button" class="wb-color-btn" data-wb-color="#3498DB" style="background-color: #3498DB;" title="Sky Blue" aria-label="Sky Blue"></button>
-            <button type="button" class="wb-color-btn" data-wb-color="#F1C40F" style="background-color: #F1C40F;" title="Sunflower Yellow" aria-label="Sunflower Yellow"></button>
-            <button type="button" class="wb-color-btn" data-wb-color="#FFFFFF" style="background-color: #FFFFFF;" title="White" aria-label="White"></button>
+            <button type="button" class="wb-color-btn wb-color-pine active" data-wb-color="#1F6F5B" title="Pine Green" aria-label="Pine Green"></button>
+            <button type="button" class="wb-color-btn wb-color-bright-green" data-wb-color="#2ECC71" title="Bright Green" aria-label="Bright Green"></button>
+            <button type="button" class="wb-color-btn wb-color-coral" data-wb-color="#E74C3C" title="Coral Red" aria-label="Coral Red"></button>
+            <button type="button" class="wb-color-btn wb-color-sky" data-wb-color="#3498DB" title="Sky Blue" aria-label="Sky Blue"></button>
+            <button type="button" class="wb-color-btn wb-color-yellow" data-wb-color="#F1C40F" title="Sunflower Yellow" aria-label="Sunflower Yellow"></button>
+            <button type="button" class="wb-color-btn wb-color-white" data-wb-color="#FFFFFF" title="White" aria-label="White"></button>
             <input type="color" id="wbColorPicker" class="wb-color-picker" value="#1F6F5B" title="Custom color picker" aria-label="Custom color picker">
           </div>
 
@@ -279,7 +279,7 @@
           </svg>
           Undo
         </button>
-        <button type="button" class="wb-action-btn wb-clear-btn" id="btnWhiteboardClear" style="display: none;" title="Clear board (Host only)" aria-label="Clear board">
+        <button type="button" class="wb-action-btn wb-clear-btn d-none" id="btnWhiteboardClear" title="Clear board (Host only)" aria-label="Clear board">
           Clear
         </button>
         <button type="button" class="wb-action-btn" id="btnWhiteboardExport" title="Export as PNG" aria-label="Export whiteboard as PNG">
@@ -307,7 +307,7 @@
   <div id="roomAriaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Replaced Session In-Page Overlay Modal -->
-  <div id="replacedSessionModal" class="room-modal-backdrop" style="display: none;" role="alertdialog" aria-modal="true" aria-labelledby="replacedTitle" aria-describedby="replacedDesc">
+  <div id="replacedSessionModal" class="room-modal-backdrop d-none" role="alertdialog" aria-modal="true" aria-labelledby="replacedTitle" aria-describedby="replacedDesc">
     <div class="room-modal-card">
       <div class="room-modal-icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

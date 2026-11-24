@@ -29,7 +29,7 @@ Deliver a concise, polished walkthrough under 3 minutes demonstrating:
 | **1:15 - 1:40** | **Screen Sharing** | Alice clicks "Share Screen", selects tab; Bob's mobile view updates | "With one click, desktop users can share their screen. Our client performs native track substitution on active peer connections without renegotiating the session." |
 | **1:40 - 2:05** | **Whiteboard Collaboration** | Alice draws architecture diagram; strokes appear live on Bob's screen | "Our collaborative HTML5 Canvas whiteboard synchronizes drawing coordinates in real-time over Spring WebSocket. Late joiners instantly receive the complete stroke buffer." |
 | **2:05 - 2:30** | **File Transfer & Chat** | Alice uploads PDF to file drawer; Bob downloads it; chat exchange | "Participants can share documents up to 10 MB with strict validation against executable files. Integrated group chat features timestamps and unread counters." |
-| **2:30 - 3:00** | **Security & Closing** | Show Swagger UI, Actuator health, host ends meeting | "All media is encrypted with DTLS-SRTP, database connections mandate SSL, and our schema is owned by Flyway. Thank you to CodeAlpha for this learning opportunity." |
+| **2:30 - 3:00** | **Security & Closing** | Show Swagger UI, Actuator health, host ends meeting | "All media streams directly peer-to-peer with DTLS-SRTP encryption, chat and files are encrypted at rest with AES-256-GCM, database connections mandate SSL, and our schema is owned by Flyway. Thank you to CodeAlpha for this learning opportunity." |
 
 ---
 
@@ -45,7 +45,7 @@ Deliver a concise, polished walkthrough under 3 minutes demonstrating:
 - **Frontend:** Implemented responsive vanilla JavaScript clients, WebRTC `RTCPeerConnection` mesh management, and HTML5 Canvas coordinate math without heavy frameworks.
 - **Backend:** Designed clean layered Spring Boot architecture (`Controller -> Service -> Repository`) using DTOs, custom exception advice, and Flyway schema evolution.
 - **Media Streaming:** Mastered WebRTC SDP offer/answer handshakes, ICE candidate relaying, dynamic STUN/TURN negotiation, and display track substitution.
-- **Security:** Engineered end-to-end transport encryption, stateless JWT filters, BCrypt hashing, and PostgreSQL Row-Level Security guardrails.
+- **Security:** Engineered DTLS-SRTP P2P media encryption, TLS 1.3 in transit, AES-256-GCM encrypted storage for chat/files, stateless JWT filters, and BCrypt hashing.
 
 ---
 

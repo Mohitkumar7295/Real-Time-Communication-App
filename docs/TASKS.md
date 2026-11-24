@@ -79,7 +79,7 @@
 
 - [ ] **T-3.4 User: Profile Endpoints & Account Lifecycle** (FR-1, FR-1A)
   - Files: `UserController.java`, `UserService.java`, `UpdateProfileRequest.java`, `ChangePasswordRequest.java`, `DeleteAccountRequest.java`
-  - Steps: Implement PATCH /api/users/me (name update, 2-50 chars), POST /api/users/me/change-password (BCrypt validation, rate limited 429), and DELETE /api/users/me (password verification, 409 active room conflict check, cascading deletion). Ensure GET /api/users/me includes createdAt.
+  - Steps: Add Flyway migration V12__add_token_version.sql (token_version INT NOT NULL DEFAULT 0); implement PATCH /api/users/me (name update, 2-50 chars), POST /api/users/me/change-password (BCrypt validation, token_version increment, return new token, rate limited 429), and DELETE /api/users/me (password verification, 409 active room conflict check, cascading deletion). In JwtAuthFilter, validate ver claim against DB token_version; on change-password and delete, close user's WebSocket sessions with code 4001 and purge tickets. Ensure GET /api/users/me includes createdAt.
   - Done when: Profile updates, password changes, and account deletion pass all security checks. Test: `mvn test -Dtest=UserControllerTest`.
 
 - [ ] **T-4.1 Rooms: Lifecycle & Capacity Service** (FR-4, FR-5, FR-6, FR-7)

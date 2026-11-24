@@ -157,11 +157,27 @@ async function initRoom() {
       teardown();
       window.location.replace(`ended.html?reason=${encodeURIComponent(payload?.reason || 'Room ended by host')}`);
     },
+    onUnauthorized: (payload) => {
+      teardown();
+      alert(payload?.reason || 'Your session expired or was revoked. Please log in again.');
+      window.location.replace('login.html');
+    },
+    onRoomFull: (payload) => {
+      teardown();
+      alert(payload?.reason || 'This meeting is at maximum capacity (5 participants).');
+      window.location.replace('dashboard.html');
+    },
+    onTerminalClose: (payload) => {
+      teardown();
+      alert(payload?.reason || 'Meeting connection closed.');
+      window.location.replace('dashboard.html');
+    },
     onReplaced: () => {
       // Tear down all local media, screen capture, peer connections, and wake lock
       teardown();
       const modal = document.getElementById('replacedSessionModal');
       if (modal) {
+        modal.classList.remove('d-none');
         modal.style.display = 'flex';
         const returnBtn = document.getElementById('btnReplacedReturn');
         if (returnBtn) {
@@ -364,6 +380,41 @@ async function initRoom() {
     },
     onSpeakingVolume: (volume, isSpeaking) => {
       videoGrid.setSpeakingState('local', isSpeaking);
+    },
+    onTrackEnded: (kind) => {
+      if (kind === 'audio') {
+        mediaManager.setAudioMuted(true);
+        btnToggleMic.classList.add('btn-active-muted');
+        btnToggleMic.innerHTML = ICON_MIC_OFF;
+        videoGrid.setAudioMuteState('local', true);
+        if (signaling) {
+          signaling.send({
+            type: 'mute-status',
+            roomCode: signaling.roomCode,
+            payload: {
+              audioMuted: true,
+              videoMuted: mediaManager.videoMuted
+            }
+          });
+        }
+        showToast('Microphone disconnected or stopped');
+      } else if (kind === 'video') {
+        mediaManager.setVideoMuted(true);
+        btnToggleCam.classList.add('btn-active-muted');
+        btnToggleCam.innerHTML = ICON_CAM_OFF;
+        videoGrid.setCameraState('local', false, currentUser?.name || 'You');
+        if (signaling) {
+          signaling.send({
+            type: 'mute-status',
+            roomCode: signaling.roomCode,
+            payload: {
+              audioMuted: mediaManager.audioMuted,
+              videoMuted: true
+            }
+          });
+        }
+        showToast('Camera disconnected or stopped');
+      }
     },
     onHardwareError: (err) => {
       showToast(err.message);
@@ -719,17 +770,7 @@ function bindControls(roomCode, hostPrivileges) {
   }
 
   // Keyboard Shortcuts: M & V ONLY (No S shortcut per specification)
-  window.addEventListener('keydown', (e) => {
-    if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-
-    if (e.key === 'm' || e.key === 'M') {
-      e.preventDefault();
-      toggleMic();
-    } else if (e.key === 'v' || e.key === 'V') {
-      e.preventDefault();
-      toggleCamera();
-    }
-  });
+  window.addEventListener('keydown', handleRoomKeyDown);
 
   // Copy Code Button
   btnCopyCode.addEventListener('click', () => {
@@ -769,6 +810,26 @@ function bindControls(roomCode, hostPrivileges) {
   window.addEventListener('pagehide', teardown);
   window.addEventListener('beforeunload', teardown);
   window.addEventListener('popstate', teardown);
+}
+
+function handleRoomKeyDown(e) {
+  if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
+
+  if (e.key === 'm' || e.key === 'M') {
+    e.preventDefault();
+    toggleMic();
+  } else if (e.key === 'v' || e.key === 'V') {
+    e.preventDefault();
+    toggleCamera();
+  }
+}
+
+async function handleVisibilityChange() {
+  if (wakeLock !== null && document.visibilityState === 'visible') {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (e) {}
+  }
 }
 
 function toggleMic() {
@@ -821,11 +882,7 @@ async function acquireWakeLock() {
   try {
     if ('wakeLock' in navigator) {
       wakeLock = await navigator.wakeLock.request('screen');
-      document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible') {
-          wakeLock = await navigator.wakeLock.request('screen');
-        }
-      });
+      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
   } catch (err) {
     logDebug('Room', 'Screen Wake Lock could not be acquired', err.message);
@@ -900,6 +957,18 @@ function teardown() {
   if (whiteboardManager) {
     whiteboardManager.destroy();
     whiteboardManager = null;
+  }
+
+  window.removeEventListener('keydown', handleRoomKeyDown);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  window.removeEventListener('pagehide', teardown);
+  window.removeEventListener('beforeunload', teardown);
+  window.removeEventListener('popstate', teardown);
+
+  if (document.fullscreenElement) {
+    try {
+      document.exitFullscreen().catch(() => {});
+    } catch (e) {}
   }
 }
 

@@ -520,7 +520,7 @@ html, body {
   border-radius: var(--radius-md);
   font-size: 13px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 90;
+  z-index: 1100;
   pointer-events: none;
   animation: fadeInOut 3s forwards;
 }
@@ -1045,6 +1045,7 @@ html, body {
 }
 
 .upload-progress-fill {
+  width: 0%;
   height: 100%;
   background-color: var(--accent-green);
   transition: width 0.15s ease;
@@ -1680,6 +1681,13 @@ html, body {
   outline: 2px solid var(--accent-green);
   outline-offset: 2px;
 }
+
+.wb-color-pine { background-color: #1F6F5B; }
+.wb-color-bright-green { background-color: #2ECC71; }
+.wb-color-coral { background-color: #E74C3C; }
+.wb-color-sky { background-color: #3498DB; }
+.wb-color-yellow { background-color: #F1C40F; }
+.wb-color-white { background-color: #FFFFFF; }
 
 .wb-color-picker {
   width: 26px;

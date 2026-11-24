@@ -291,6 +291,18 @@
   display: inline-block;
 }
 
+.mock-swatch-accent {
+  background-color: var(--accent);
+}
+
+.mock-swatch-ink {
+  background-color: var(--ink);
+}
+
+.mock-swatch-error {
+  background-color: var(--error);
+}
+
 .mock-board-sketch {
   width: 100%;
   height: 85px;
@@ -314,6 +326,11 @@
   font-size: 10px;
   font-weight: 600;
   fill: var(--accent);
+}
+
+.sketch-dtls-text {
+  font-size: 8.5px;
+  font-weight: 600;
 }
 
 .sketch-text-muted {

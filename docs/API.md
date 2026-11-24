@@ -63,8 +63,18 @@
 ### 3.3B `POST /api/users/me/change-password` (FR-1A)
 - **Auth:** Authenticated User (`Bearer <JWT>`).
 - **Request:** `{"currentPassword": "OldPassword1!", "newPassword": "NewPassword2@"}` (same strength rules as registration: $\ge 8$ characters, at least 1 letter and 1 digit).
-- **Rules:** Validates current password using BCrypt; rejects new password if identical to current password; rate limited (5 attempts per minute per user/IP).
-- **Success:** `204 No Content`.
+- **Rules:** Validates current password using BCrypt; rejects new password if identical to current password; rate limited (5 attempts per minute per user/IP). On success, increments `users.token_version`, closes all active WebSocket sessions for that user with code 4001, invalidates unused tickets, and returns a new JWT with the incremented version so the current device stays signed in.
+- **Success:** `200 OK` $\to$
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "user": {
+      "id": 1,
+      "name": "Aarav Kumar",
+      "email": "a@ex.com"
+    }
+  }
+  ```
 - **Errors:** `400 Bad Request` (validation failure / new password matches current password), `401 Unauthorized` (incorrect current password or missing token), `429 Too Many Requests` (rate limited).
 
 ### 3.3C `DELETE /api/users/me` (FR-1A)
@@ -260,8 +270,7 @@
       },
       {
         "urls": [
-          "turn:turn.meetapp.com:3478?transport=udp",
-          "turn:turn.meetapp.com:3478?transport=tcp"
+          "turn:turn.meetapp.com:3478"
         ],
         "username": "relay_user",
         "credential": "relay_password"
@@ -271,7 +280,8 @@
   ```
 - **Rules:**
   - STUN URLs are always returned from `app.webrtc.stun-urls`.
-  - TURN entry is included only if `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` (or time-limited dynamic credentials) are configured.
+  - TURN entry is included only if `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` are configured.
+  - Multi-URL TURN: Supports comma-separated TURN endpoints. Valid `turn:` and `turns:` URLs are returned trimmed, deduplicated, and preserved exactly as configured in a single `iceServers` entry in configured order without synthetic transport expansion.
   - Never logs credentials in logs; `AppProperties.toString()` masks the credential.
 - **Errors:** `401 Unauthorized` (missing/invalid token), `429 Too Many Requests` (rate limit exceeded).
 
@@ -280,7 +290,7 @@
 - **Success:** `200 OK` $\to$ `{"status": "UP"}`.
 
 ## 4. Authentication Details
-- **Token:** JJWT HMAC-SHA256. Claims: `sub` (userId), `email`, `iat`, `exp` (24h).
+- **Token:** JJWT HMAC-SHA256. Claims: `sub` (userId), `email`, `ver` (tokenVersion integer), `iat`, `exp` (24h). Tokens without `ver` or with `ver != user.token_version` are rejected with `401 Unauthorized`.
 - **Expiry:** Expired tokens return `401 Unauthorized`; client redirects to `/login.html`.
 - **Logout:** Client deletes token from `localStorage`. No server session.
 

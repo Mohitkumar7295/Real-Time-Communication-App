@@ -86,7 +86,7 @@ class IceConfigControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.iceServers", hasSize(2)))
                 .andExpect(jsonPath("$.iceServers[0].urls", hasItem("stun:stun.l.google.com:19302")))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:turn.meetapp.com:3478?transport=udp")))
+                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:turn.meetapp.com:3478")))
                 .andExpect(jsonPath("$.iceServers[1].username", is("relay_user")))
                 .andExpect(jsonPath("$.iceServers[1].credential", is("relay_secret_123")));
 
@@ -124,8 +124,8 @@ class IceConfigControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/webrtc/ice-config with multi-URL TURN parses comma-separated, deduplicates, and expands transports")
-    void getIceConfig_multiTurnUrls_deduplicatesAndExpands() throws Exception {
+    @DisplayName("GET /api/webrtc/ice-config with multi-URL TURN parses comma-separated, deduplicates, and preserves exact configured URLs")
+    void getIceConfig_multiTurnUrls_deduplicatesAndPreservesExact() throws Exception {
         appProperties.setTurnUrl("turn:relay1.meetapp.com:3478, turns:relay2.meetapp.com:5349?transport=tcp, turn:relay1.meetapp.com:3478");
         appProperties.setTurnUsername("relay_user");
         appProperties.setTurnCredential("relay_secret_123");
@@ -135,10 +135,9 @@ class IceConfigControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.iceServers", hasSize(2)))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:relay1.meetapp.com:3478?transport=udp")))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:relay1.meetapp.com:3478?transport=tcp")))
+                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:relay1.meetapp.com:3478")))
                 .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turns:relay2.meetapp.com:5349?transport=tcp")))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasSize(3))); // deduplicated from 4 to 3
+                .andExpect(jsonPath("$.iceServers[1].urls", hasSize(2))); // deduplicated from 3 to 2
 
         // Cleanup
         appProperties.setTurnUrl(null);
@@ -158,9 +157,8 @@ class IceConfigControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.iceServers", hasSize(2)))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:valid.meetapp.com:3478?transport=udp")))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:valid.meetapp.com:3478?transport=tcp")))
-                .andExpect(jsonPath("$.iceServers[1].urls", hasSize(2))); // only valid.meetapp.com kept
+                .andExpect(jsonPath("$.iceServers[1].urls", hasItem("turn:valid.meetapp.com:3478")))
+                .andExpect(jsonPath("$.iceServers[1].urls", hasSize(1))); // only valid.meetapp.com kept
 
         // Cleanup
         appProperties.setTurnUrl(null);

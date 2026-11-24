@@ -18,7 +18,11 @@ let allMeetings = [];
 function extractRoomCode(raw) {
   if (!raw) return '';
   const trimmed = raw.trim();
-  // Support pasting full room URL: https://domain/room.html?room=DEMO1001
+  // Support pasting full room URL: https://domain/room.html?code=K7M2QX9P
+  if (trimmed.includes('?code=')) {
+    const parts = trimmed.split('?code=');
+    return (parts[1] || '').split('&')[0].trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
   if (trimmed.includes('?room=')) {
     const parts = trimmed.split('?room=');
     return (parts[1] || '').split('&')[0].trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -31,7 +35,7 @@ async function handleCreateInstantMeeting(btn) {
     if (btn) btn.disabled = true;
 
     if (CONFIG.MOCK) {
-      window.location.href = 'room.html?room=MOCK1001';
+      window.location.href = 'room.html?code=MOCK1001';
       return;
     }
 
@@ -40,7 +44,7 @@ async function handleCreateInstantMeeting(btn) {
 
     // Decoupled host entry: call join to establish participant record
     await apiRequest(`/rooms/${encodeURIComponent(code)}/join`, { method: 'POST' });
-    window.location.href = `room.html?room=${encodeURIComponent(code)}`;
+    window.location.href = `room.html?code=${encodeURIComponent(code)}`;
   } catch (err) {
     console.error('Failed to create instant meeting', err);
     alert('Could not start meeting: ' + (err.message || 'Server error'));
@@ -50,19 +54,20 @@ async function handleCreateInstantMeeting(btn) {
 
 async function handleJoinMeeting(codeOrUrl) {
   const code = extractRoomCode(codeOrUrl);
-  if (!code || code.length < 4) {
+  // Accept both old alphabet (including L) and new alphabet (without L), length 6 to 16
+  if (!code || !/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6,16}$/i.test(code)) {
     alert('Please enter a valid 8-character meeting code or URL.');
     return;
   }
 
   try {
     if (CONFIG.MOCK) {
-      window.location.href = `room.html?room=${encodeURIComponent(code)}`;
+      window.location.href = `room.html?code=${encodeURIComponent(code)}`;
       return;
     }
 
     await apiRequest(`/rooms/${encodeURIComponent(code)}/join`, { method: 'POST' });
-    window.location.href = `room.html?room=${encodeURIComponent(code)}`;
+    window.location.href = `room.html?code=${encodeURIComponent(code)}`;
   } catch (err) {
     console.warn('Failed to join room', err);
     if (err.status === 404) {
@@ -169,7 +174,7 @@ async function loadMeetingHistory() {
   if (CONFIG.MOCK) {
     allMeetings = [
       {
-        roomCode: 'DEMO1001',
+        roomCode: 'K7M2QX9P',
         hostId: 1,
         role: 'HOST',
         isActive: true,
@@ -259,38 +264,75 @@ async function initDashboard() {
   }
 
   // 5. Initialize Device Checker Dialog
+  let lastFocusedElement = null;
+
   const deviceDialog = document.getElementById('deviceDialog');
   const previewVideo = document.getElementById('previewVideo');
   const audioFill = document.getElementById('audioFill');
   const deviceStatus = document.getElementById('deviceStatus');
   const btnCheckDevices = document.getElementById('btnCheckDevices');
   const btnCloseDeviceDialog = document.getElementById('btnCloseDeviceDialog');
+  const btnCloseDeviceDialogFooter = document.getElementById('btnCloseDeviceDialogFooter');
 
   if (deviceDialog && previewVideo && audioFill && deviceStatus) {
     deviceCheckerInstance = new DeviceChecker(deviceDialog, previewVideo, audioFill, deviceStatus);
     if (btnCheckDevices) {
-      btnCheckDevices.addEventListener('click', () => deviceCheckerInstance.openAndStart());
+      btnCheckDevices.addEventListener('click', () => {
+        lastFocusedElement = btnCheckDevices;
+        deviceCheckerInstance.openAndStart();
+      });
     }
     if (btnCloseDeviceDialog) {
       btnCloseDeviceDialog.addEventListener('click', () => deviceDialog.close());
     }
+    if (btnCloseDeviceDialogFooter) {
+      btnCloseDeviceDialogFooter.addEventListener('click', () => deviceDialog.close());
+    }
+    deviceDialog.addEventListener('close', () => {
+      if (lastFocusedElement) {
+        lastFocusedElement.focus();
+        lastFocusedElement = null;
+      }
+    });
   }
 
   // 6. Initialize Info & Help Dialogs
   const learnMoreDialog = document.getElementById('learnMoreDialog');
   const btnLearnMore = document.getElementById('btnLearnMore');
   const btnCloseLearnMore = document.getElementById('btnCloseLearnMore');
+  const btnCloseLearnMoreFooter = document.getElementById('btnCloseLearnMoreFooter');
   if (learnMoreDialog && btnLearnMore) {
-    btnLearnMore.addEventListener('click', () => learnMoreDialog.showModal());
+    btnLearnMore.addEventListener('click', () => {
+      lastFocusedElement = btnLearnMore;
+      learnMoreDialog.showModal();
+    });
     if (btnCloseLearnMore) btnCloseLearnMore.addEventListener('click', () => learnMoreDialog.close());
+    if (btnCloseLearnMoreFooter) btnCloseLearnMoreFooter.addEventListener('click', () => learnMoreDialog.close());
+    learnMoreDialog.addEventListener('close', () => {
+      if (lastFocusedElement) {
+        lastFocusedElement.focus();
+        lastFocusedElement = null;
+      }
+    });
   }
 
   const helpDialog = document.getElementById('helpDialog');
   const btnHelp = document.getElementById('btnHelp');
   const btnCloseHelp = document.getElementById('btnCloseHelp');
+  const btnCloseHelpFooter = document.getElementById('btnCloseHelpFooter');
   if (helpDialog && btnHelp) {
-    btnHelp.addEventListener('click', () => helpDialog.showModal());
+    btnHelp.addEventListener('click', () => {
+      lastFocusedElement = btnHelp;
+      helpDialog.showModal();
+    });
     if (btnCloseHelp) btnCloseHelp.addEventListener('click', () => helpDialog.close());
+    if (btnCloseHelpFooter) btnCloseHelpFooter.addEventListener('click', () => helpDialog.close());
+    helpDialog.addEventListener('close', () => {
+      if (lastFocusedElement) {
+        lastFocusedElement.focus();
+        lastFocusedElement = null;
+      }
+    });
   }
 
   // 7. Load Initial Meetings Data

@@ -33,6 +33,7 @@ class JwtHandshakeInterceptorTest {
     private RoomRepository roomRepository;
     private RoomParticipantRepository roomParticipantRepository;
     private AppProperties appProperties;
+
     private JwtHandshakeInterceptor interceptor;
 
     private ServerHttpRequest request;
@@ -75,7 +76,7 @@ class JwtHandshakeInterceptorTest {
     @Test
     @DisplayName("handshake rejected with 403 Forbidden when Origin does not match allowed origin")
     void handshake_rejectedFromWrongOrigin() {
-        setupHeaders("http://unauthorized-domain.com", "http://localhost:8080/ws?token=abc&room=DEMO1001");
+        setupHeaders("http://unauthorized-domain.com", "http://localhost:8080/ws?ticket=abc&code=K7M2QX9P");
 
         boolean result = interceptor.beforeHandshake(request, response, wsHandler, new HashMap<>());
 
@@ -84,9 +85,9 @@ class JwtHandshakeInterceptorTest {
     }
 
     @Test
-    @DisplayName("handshake rejected with 401 Unauthorized when token is missing")
-    void handshake_rejectedWithoutToken() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?room=DEMO1001");
+    @DisplayName("handshake rejected with 401 Unauthorized when raw JWT token is passed in query string")
+    void handshake_rejectedWhenTokenInQueryString() {
+        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?token=raw_jwt_value&code=K7M2QX9P");
 
         boolean result = interceptor.beforeHandshake(request, response, wsHandler, new HashMap<>());
 
@@ -95,10 +96,21 @@ class JwtHandshakeInterceptorTest {
     }
 
     @Test
-    @DisplayName("handshake rejected with 401 Unauthorized when JWT is invalid")
-    void handshake_rejectedWithInvalidToken() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?token=invalid_jwt&room=DEMO1001");
-        when(jwtService.extractUserId("invalid_jwt")).thenReturn(Optional.empty());
+    @DisplayName("handshake rejected with 401 Unauthorized when ticket is missing")
+    void handshake_rejectedWithoutTicket() {
+        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?code=K7M2QX9P");
+
+        boolean result = interceptor.beforeHandshake(request, response, wsHandler, new HashMap<>());
+
+        assertFalse(result);
+        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("handshake rejected with 401 Unauthorized when ticket is invalid or consumed")
+    void handshake_rejectedWithInvalidTicket() {
+        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?ticket=invalid_or_used&code=K7M2QX9P");
+        when(wsTicketService.consumeTicket("invalid_or_used")).thenReturn(Optional.empty());
 
         boolean result = interceptor.beforeHandshake(request, response, wsHandler, new HashMap<>());
 
@@ -109,12 +121,12 @@ class JwtHandshakeInterceptorTest {
     @Test
     @DisplayName("handshake rejected with 404 Not Found when room does not exist")
     void handshake_rejectedWhenRoomNotFound() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?token=valid_jwt&room=DEMO1001");
-        when(jwtService.extractUserId("valid_jwt")).thenReturn(Optional.of(1L));
+        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?ticket=valid_ticket&code=K7M2QX9P");
+        when(wsTicketService.consumeTicket("valid_ticket")).thenReturn(Optional.of(1L));
 
         User user = new User("Aarav", "aarav@example.com", "hash");
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(roomRepository.findByRoomCode("DEMO1001")).thenReturn(Optional.empty());
+        when(roomRepository.findByRoomCode("K7M2QX9P")).thenReturn(Optional.empty());
 
         boolean result = interceptor.beforeHandshake(request, response, wsHandler, new HashMap<>());
 
@@ -125,15 +137,15 @@ class JwtHandshakeInterceptorTest {
     @Test
     @DisplayName("handshake rejected with 403 Forbidden when user is not an active participant")
     void handshake_rejectedWhenNotActiveParticipant() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?token=valid_jwt&room=DEMO1001");
-        when(jwtService.extractUserId("valid_jwt")).thenReturn(Optional.of(1L));
+        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?ticket=valid_ticket&code=K7M2QX9P");
+        when(wsTicketService.consumeTicket("valid_ticket")).thenReturn(Optional.of(1L));
 
         User host = new User("Host", "host@example.com", "hash");
         User user = new User("Aarav", "aarav@example.com", "hash");
-        Room room = new Room("DEMO1001", host);
+        Room room = new Room("K7M2QX9P", host);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(roomRepository.findByRoomCode("DEMO1001")).thenReturn(Optional.of(room));
+        when(roomRepository.findByRoomCode("K7M2QX9P")).thenReturn(Optional.of(room));
         when(roomParticipantRepository.findByRoomIdAndUserIdAndLeftAtIsNull(room.getId(), 1L))
                 .thenReturn(Optional.empty());
 
@@ -144,67 +156,28 @@ class JwtHandshakeInterceptorTest {
     }
 
     @Test
-    @DisplayName("handshake accepted and populates session attributes when all checks pass")
+    @DisplayName("handshake accepted and populates session attributes when ticket and room checks pass")
     void handshake_acceptedWhenValid() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?token=valid_jwt&room=DEMO1001");
-        when(jwtService.extractUserId("valid_jwt")).thenReturn(Optional.of(1L));
+        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?ticket=valid_ticket&code=K7M2QX9P");
+        when(wsTicketService.consumeTicket("valid_ticket")).thenReturn(Optional.of(1L));
 
         User host = new User("Host", "host@example.com", "hash");
         User user = new User("Aarav", "aarav@example.com", "hash");
-        Room room = new Room("DEMO1001", host);
+        Room room = new Room("K7M2QX9P", host);
         RoomParticipant participant = new RoomParticipant(room, user);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(roomRepository.findByRoomCode("DEMO1001")).thenReturn(Optional.of(room));
+        when(roomRepository.findByRoomCode("K7M2QX9P")).thenReturn(Optional.of(room));
         when(roomParticipantRepository.findByRoomIdAndUserIdAndLeftAtIsNull(room.getId(), 1L))
                 .thenReturn(Optional.of(participant));
-        when(roomParticipantRepository.countByRoomIdAndLeftAtIsNull(room.getId())).thenReturn(1L);
 
         Map<String, Object> attributes = new HashMap<>();
         boolean result = interceptor.beforeHandshake(request, response, wsHandler, attributes);
 
         assertTrue(result);
         assertEquals(1L, attributes.get("userId"));
-        assertEquals("DEMO1001", attributes.get("roomCode"));
+        assertEquals("K7M2QX9P", attributes.get("roomCode"));
         assertEquals("Aarav", attributes.get("name"));
-    }
-
-    @Test
-    @DisplayName("handshake accepted and populates session attributes when valid ticket supplied")
-    void handshake_acceptedWhenValidTicket() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?ticket=abc123ticket&room=DEMO1001");
-        when(wsTicketService.consumeTicket("abc123ticket")).thenReturn(Optional.of(2L));
-
-        User host = new User("Host", "host@example.com", "hash");
-        User user = new User("Diya", "diya@example.com", "hash");
-        Room room = new Room("DEMO1001", host);
-        RoomParticipant participant = new RoomParticipant(room, user);
-
-        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
-        when(roomRepository.findByRoomCode("DEMO1001")).thenReturn(Optional.of(room));
-        when(roomParticipantRepository.findByRoomIdAndUserIdAndLeftAtIsNull(room.getId(), 2L))
-                .thenReturn(Optional.of(participant));
-        when(roomParticipantRepository.countByRoomIdAndLeftAtIsNull(room.getId())).thenReturn(1L);
-
-        Map<String, Object> attributes = new HashMap<>();
-        boolean result = interceptor.beforeHandshake(request, response, wsHandler, attributes);
-
-        assertTrue(result);
-        assertEquals(2L, attributes.get("userId"));
-        assertEquals("DEMO1001", attributes.get("roomCode"));
-        assertEquals("Diya", attributes.get("name"));
-    }
-
-    @Test
-    @DisplayName("handshake rejected when ticket is invalid or already consumed")
-    void handshake_rejectedWhenTicketInvalid() {
-        setupHeaders("http://localhost:8080", "http://localhost:8080/ws?ticket=consumed_ticket&room=DEMO1001");
-        when(wsTicketService.consumeTicket("consumed_ticket")).thenReturn(Optional.empty());
-
-        boolean result = interceptor.beforeHandshake(request, response, wsHandler, new HashMap<>());
-
-        assertFalse(result);
-        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+        assertEquals(room.getId(), attributes.get("roomId"));
     }
 }
-

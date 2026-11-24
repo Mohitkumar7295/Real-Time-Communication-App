@@ -25,6 +25,9 @@ export class SignalingClient {
       onScreenShareStop: callbacks.onScreenShareStop || (() => {}),
       onRoomEnded: callbacks.onRoomEnded || (() => {}),
       onReplaced: callbacks.onReplaced || (() => {}),
+      onUnauthorized: callbacks.onUnauthorized || (() => {}),
+      onRoomFull: callbacks.onRoomFull || (() => {}),
+      onTerminalClose: callbacks.onTerminalClose || (() => {}),
       onReconnect: callbacks.onReconnect || (() => {}),
       onSignalError: callbacks.onSignalError || (() => {}),
       onChat: callbacks.onChat || (() => {}),
@@ -74,7 +77,7 @@ export class SignalingClient {
 
       // 2. Build WebSocket URL using ticket (never logged)
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}${CONFIG.WS_PATH}?ticket=${encodeURIComponent(ticket)}&room=${encodeURIComponent(this.roomCode)}`;
+      const wsUrl = `${protocol}//${window.location.host}${CONFIG.WS_PATH}?ticket=${encodeURIComponent(ticket)}&code=${encodeURIComponent(this.roomCode)}`;
 
       logDebug('Signaling', `Connecting to room ${this.roomCode}`);
       this.ws = new WebSocket(wsUrl);
@@ -108,6 +111,8 @@ export class SignalingClient {
         this._stopHeartbeat();
         logDebug('Signaling', `WebSocket closed with code ${event.code}: ${event.reason || 'No reason'}`);
 
+        const TERMINAL_CLOSE_CODES = new Set([1000, 1008, 1009, 4000, 4001, 4003, 4009, 4010]);
+
         if (event.code === 4000) {
           // Replaced by newer session in another tab
           this.isExplicitlyClosed = true;
@@ -118,13 +123,33 @@ export class SignalingClient {
         if (event.code === 4010) {
           // Room ended by host
           this.isExplicitlyClosed = true;
-          this.callbacks.onRoomEnded({ reason: 'Room ended by host' });
+          this.callbacks.onRoomEnded({ reason: event.reason || 'Room ended by host' });
+          return;
+        }
+
+        if (event.code === 4001) {
+          // Unauthorized / token expired / version invalid
+          this.isExplicitlyClosed = true;
+          this.callbacks.onUnauthorized({ reason: event.reason || 'Authentication required' });
+          return;
+        }
+
+        if (event.code === 4009) {
+          // Room at maximum capacity
+          this.isExplicitlyClosed = true;
+          this.callbacks.onRoomFull({ reason: event.reason || 'Room is full' });
+          return;
+        }
+
+        if (TERMINAL_CLOSE_CODES.has(event.code)) {
+          this.isExplicitlyClosed = true;
+          this.callbacks.onTerminalClose({ code: event.code, reason: event.reason || 'Connection terminated' });
           return;
         }
 
         this.callbacks.onClose(event);
 
-        if (!this.isExplicitlyClosed && event.code !== 1000) {
+        if (!this.isExplicitlyClosed && !TERMINAL_CLOSE_CODES.has(event.code)) {
           this._scheduleReconnect();
         }
       };
@@ -132,6 +157,11 @@ export class SignalingClient {
       this.isConnecting = false;
       logDebug('Signaling', 'Failed during handshake or ticket retrieval', err.message);
       this.callbacks.onError(err);
+      if (err.status === 401 || err.status === 403) {
+        this.isExplicitlyClosed = true;
+        this.callbacks.onUnauthorized({ reason: err.message || 'Authentication required to enter room' });
+        return;
+      }
       this._scheduleReconnect();
     }
   }

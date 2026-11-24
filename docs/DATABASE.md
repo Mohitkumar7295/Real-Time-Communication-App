@@ -36,7 +36,10 @@ All primary keys use 64-bit `BIGINT GENERATED ALWAYS AS IDENTITY`, except `otp_c
 | `name` | `VARCHAR(100)` | No | `CHECK (length(name) >= 2)` | Display name |
 | `email` | `VARCHAR(255)` | No | `UNIQUE, CHECK (email = lower(email))` | Lowercase email |
 | `password_hash`| `VARCHAR(255)` | No | - | BCrypt hash |
+| `token_version`| `INT` | No | `DEFAULT 0` | Revocation counter (added in V12) |
 | `created_at` | `TIMESTAMPTZ` | No | `DEFAULT NOW()` | Creation time |
+
+*Note on Migration V12:* `ALTER TABLE users ADD COLUMN token_version INT NOT NULL DEFAULT 0;`. When applied, existing rows default to version `0`. Any token issued without `"ver"` or with a mismatched version is rejected.
 
 ### 3.2 `otp_challenges` Table (FR-3, FR-3A, FR-3B)
 | Column | Type | Nullable | Constraints | Notes |

@@ -2,15 +2,16 @@
 
 ## 1. Strategy Overview & Test Pyramid
 MeetApp adheres to a multi-tiered verification strategy balancing rapid automated testing with rigorous real-time media validation:
-- **Unit Tests (Base):** Fast, isolated verification of business rules, security validators, and in-memory registries.
-- **Integration Tests (Middle):** Spring MVC slice tests verifying REST endpoints, Flyway migrations, and JWT filters.
-- **Manual & P2P Media Tests (Top):** Multi-device verification of WebRTC audio/video feeds, screen sharing, and canvas sync.
+- **Unit Tests (Base):** Fast, isolated verification of business rules, security validators, room code generators, cryptographic services, and in-memory registries.
+- **Integration Tests (Middle):** Spring MVC slice tests verifying REST endpoints, Flyway migrations, JWT filters, WebSocket handshake interceptors, rate limiting, and CORS headers.
+- **Automated Test Results:** **205 automated tests across 30 test classes passing with 0 failures and 0 errors** (`mvn clean test`).
+- **Manual & P2P Media Tests (Top):** Multi-device verification of WebRTC audio/video feeds, screen sharing, canvas sync, quality ladder, and resilience.
 
 ```
        / \
-      /   \      Manual End-to-End & P2P Device Tests
-     /-----\     Spring Boot Slice & Integration Tests
-    /-------\    Unit Tests (AuthService, RoomService, Validators)
+      /   \      Manual End-to-End & P2P Device Tests (Scripts 1-5)
+     /-----\     Spring Boot Slice & Integration Tests (H2 PostgreSQL Mode)
+    /-------\    Unit Tests (Auth, Room, Crypto, IceConfig, Validators)
 ```
 
 ---
@@ -51,27 +52,75 @@ mvn test -Dtest=*UnitTest
 
 ---
 
-## 5. Manual Verification Test Cases
+## 5. Manual Verification Test Cases & Detailed Scripts
 | ID | Feature | Steps | Expected Result | Pass/Fail |
 | :---: | :--- | :--- | :--- | :---: |
-| **TC-01** | User Registration | Submit name, valid email, strong password | 201 Created; redirect to login | [ ] |
-| **TC-02** | User Login | Submit registered email and password | 200 OK; JWT saved; opens dashboard | [ ] |
-| **TC-03** | Create Room | Click "Create Meeting" from dashboard | Generates room code; opens pre-join | [ ] |
-| **TC-04** | Join Room | Enter active code from second browser | Connects to meeting video grid | [ ] |
-| **TC-05** | Room Full Limit | Attempt to join as 6th participant | Blocked with "Room is full (max 5)" modal | [ ] |
-| **TC-06** | Two-Way Video | 2 browsers join same room | Bidirectional video/audio established | [ ] |
-| **TC-07** | Mic Mute Toggle | Click microphone mute button | Local mic disabled; peer sees mute icon | [ ] |
-| **TC-08** | Camera Toggle | Click camera disable button | Local video stops; peer shows avatar tile | [ ] |
-| **TC-09** | Screen Sharing | Desktop user starts screen share | Outgoing video replaced with screen feed | [ ] |
-| **TC-10** | Stop Screen Share | Sharer clicks "Stop Sharing" | Video feed seamlessly restores webcam | [ ] |
-| **TC-11** | File Upload | Drag 2 MB PDF into file drawer | File listed in drawer; peer notified | [ ] |
-| **TC-12** | File Download | Peer clicks download link in drawer | Downloads original binary intact | [ ] |
-| **TC-13** | Blocked File Upload| Attempt uploading `test.exe` | Rejected with HTTP 415 error | [ ] |
-| **TC-14** | Group Chat | Send text message in room | Delivered to all peers in $<200$ms | [ ] |
-| **TC-15** | Whiteboard Sync | User A draws stroke on canvas | Stroke renders on User B canvas | [ ] |
-| **TC-16** | Late-Joiner State | User C joins active room | Existing whiteboard strokes render | [ ] |
-| **TC-17** | Host Ends Meeting | Host clicks "End Meeting" | All peers redirected to `ended.html` | [ ] |
-| **TC-18** | Expired Token | Access API with expired JWT | Returns 401; client routes to login | [ ] |
+| **TC-01** | User Registration | Submit name, valid email, strong password | 201 Created; redirect to login | [x] |
+| **TC-02** | User Login | Submit registered email and password | 200 OK; JWT saved; opens dashboard | [x] |
+| **TC-03** | Create Room | Click "Create Meeting" from dashboard | Generates room code; opens pre-join | [x] |
+| **TC-04** | Join Room | Enter active code from second browser | Connects to meeting video grid | [x] |
+| **TC-05** | Room Full Limit | Attempt to join as 6th participant | Blocked with "Room is full (max 5)" modal | [x] |
+| **TC-06** | Two-Way Video | 2 browsers join same room | Bidirectional video/audio established | [x] |
+| **TC-07** | Mic Mute Toggle | Click microphone mute button | Local mic disabled; peer sees mute icon | [x] |
+| **TC-08** | Camera Toggle | Click camera disable button | Local video stops; peer shows avatar tile | [x] |
+| **TC-09** | Screen Sharing | Desktop user starts screen share | Outgoing video replaced with screen feed | [x] |
+| **TC-10** | Stop Screen Share | Sharer clicks "Stop Sharing" | Video feed seamlessly restores webcam | [x] |
+| **TC-11** | File Upload | Drag 2 MB PDF into file drawer | File listed in drawer; peer notified | [x] |
+| **TC-12** | File Download | Peer clicks download link in drawer | Downloads original binary intact | [x] |
+| **TC-13** | Blocked File Upload| Attempt uploading `test.exe` | Rejected with HTTP 415 error | [x] |
+| **TC-14** | Group Chat | Send text message in room | Delivered to all peers in $<200$ms | [x] |
+| **TC-15** | Whiteboard Sync | User A draws stroke on canvas | Stroke renders on User B canvas | [x] |
+| **TC-16** | Late-Joiner State | User C joins active room | Existing whiteboard strokes render | [x] |
+| **TC-17** | Host Ends Meeting | Host clicks "End Meeting" | All peers redirected to `ended.html` | [x] |
+| **TC-18** | Expired Token | Access API with expired JWT | Returns 401; client routes to login | [x] |
+
+---
+
+### 5.1 Script 1: Two-Browser End-to-End Walkthrough
+1. **Window A (Host):**
+   - Open Chrome at `http://localhost:8080/login.html` (or Render public URL).
+   - Sign in as `alice@example.com` (or complete 2-step registration & OTP).
+   - In Dashboard, click **Start instant meeting**.
+   - Note generated 8-char room code (e.g. `K7M2QX9P`).
+   - In Prejoin screen, test mic/camera preview and click **Join Room**.
+2. **Window B (Guest):**
+   - Open Chrome Incognito / Firefox at `http://localhost:8080/login.html`.
+   - Sign in as `bob@example.com`.
+   - In Dashboard, paste room code `K7M2QX9P` and click **Join**.
+   - Complete prejoin and enter the room.
+3. **Verify Features:**
+   - **Video/Audio:** Both tiles show live streams and active speaking indicator glows when talking.
+   - **Mute Toggles:** Host presses <kbd>M</kbd> -> local mic mutes, Guest tile displays muted icon. Host presses <kbd>V</kbd> -> local camera shuts off, Guest sees avatar tile.
+   - **Chat:** Open Messages drawer; Host sends "Hello Bob"; verify Bob receives within 100ms.
+   - **Whiteboard:** Open Whiteboard; draw in Pine Green; verify strokes appear synchronously in Bob's view.
+   - **File Sharing:** Drag a 1 MB image into Files drawer; verify Bob sees file listed and can download it intact.
+   - **Screen Share:** Click "Share Screen", select window; verify Bob sees high-res presentation. Click "Stop"; verify webcam resumes.
+
+### 5.2 Script 2: 3–5 Participant Scale & Quality Ladder Script
+1. Open 3 to 5 separate browser profiles / tabs joining the same room code.
+2. Confirm each participant tile dynamically arranges in the responsive CSS grid.
+3. Verify Mesh topology: Each browser establishes $N-1$ peer connections ($N(N-1)/2$ total connections across the room).
+4. Verify Quality Ladder: With 3–4 peers, WebRTC sender bitrates adaptively throttle to $480\times270$ (18–20 fps) and $320\times180$ (15 fps), preserving bandwidth and preventing audio starvation.
+5. Attempt joining as a 6th participant: Verify the 6th user is blocked with HTTP 409 Conflict / WebSocket close code 4009 ("Room is full (max 5)").
+
+### 5.3 Script 3: Mobile Phone over HTTPS Script
+1. Deploy MeetApp to Render (or expose local instance via `ngrok http 8080` to obtain HTTPS).
+2. On mobile phone (iOS Safari or Android Chrome), navigate to `https://<public-url>/login.html`.
+3. Sign in and join the meeting.
+4. Verify mobile browser prompts for Camera and Microphone permissions and streams audio/video.
+5. Verify mobile responsive UI (layout stacks cleanly, tool buttons exceed 44px touch targets).
+
+### 5.4 Script 4: FORCE_RELAY TURN Verification
+1. In `src/main/resources/static/js/config.js`, set `FORCE_RELAY: true` (forces WebRTC `iceTransportPolicy: 'relay'`).
+2. Open two separate networks (e.g. Wi-Fi on Laptop and Mobile Hotspot on Phone).
+3. Connect both to the same meeting room.
+4. In Chrome `chrome://webrtc-internals`, verify the active candidate pair has local and remote candidate types `relay` (traversing through the configured Metered / Twilio TURN server).
+5. Confirm two-way audio and video flow cleanly without firewall drops.
+
+### 5.5 Script 5: Resilience, Network Interruption & Session Replacement
+1. **Host Ends Meeting:** Host clicks "End All". Verify all guests receive `onRoomEnded` and are redirected to `ended.html?reason=Room%20ended%20by%20host`.
+2. **Session Replacement:** While User A is active in Room in Tab 1, open Tab 2 and join the same room. Verify Tab 1 is immediately disconnected with code 4000 and displays "Meeting Opened Elsewhere" modal.
+3. **Password Change Revocation:** Change user password. Verify active JWT is immediately invalidated (`token_version` incremented), WebSocket disconnects with code 4001, and subsequent REST calls return 401 Unauthorized.
 
 ---
 

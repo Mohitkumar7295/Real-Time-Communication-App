@@ -130,7 +130,7 @@ async function mockFetch(endpoint, method, body, token) {
   // 8. POST /api/rooms
   if (endpoint === '/rooms' && method === 'POST') {
     return {
-      roomCode: 'DEMO1001',
+      roomCode: 'K7M2QX9P',
       host: { id: 1, name: 'Demo User' },
       activeParticipantCount: 0,
       active: true,

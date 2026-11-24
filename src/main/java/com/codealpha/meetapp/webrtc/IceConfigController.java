@@ -81,12 +81,7 @@ public class IceConfigController {
 
                 String lower = trimmed.toLowerCase();
                 if (lower.startsWith("turn:") || lower.startsWith("turns:")) {
-                    if (trimmed.contains("?transport=")) {
-                        uniqueEndpoints.add(trimmed);
-                    } else {
-                        uniqueEndpoints.add(trimmed + "?transport=udp");
-                        uniqueEndpoints.add(trimmed + "?transport=tcp");
-                    }
+                    uniqueEndpoints.add(trimmed);
                 } else {
                     ignoredCount++;
                 }

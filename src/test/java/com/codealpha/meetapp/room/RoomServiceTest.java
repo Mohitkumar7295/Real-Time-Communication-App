@@ -243,4 +243,24 @@ class RoomServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("before or equal");
     }
+
+    @Test
+    @DisplayName("joinRoom accepts legacy room codes containing 'L' case-insensitively and trimmed")
+    void joinRoom_withLegacyCodeContainingL_joinsSuccessfully() {
+        Room legacyRoomWithL = new Room("K7L2QX9P", hostUser);
+        setId(legacyRoomWithL, 99L);
+
+        when(roomRepository.findByRoomCodeForUpdate("K7L2QX9P")).thenReturn(Optional.of(legacyRoomWithL));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(peerUser));
+        when(roomParticipantRepository.findByRoomIdAndUserIdAndLeftAtIsNull(99L, 2L)).thenReturn(Optional.empty());
+        when(roomParticipantRepository.countByRoomIdAndLeftAtIsNull(99L)).thenReturn(1L);
+        when(roomParticipantRepository.save(any(RoomParticipant.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Test with untrimmed lowercase input
+        RoomResponse response = roomService.joinRoom("  k7l2qx9p  ", 2L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.roomCode()).isEqualTo("K7L2QX9P");
+        assertThat(response.participantCount()).isEqualTo(2);
+    }
 }

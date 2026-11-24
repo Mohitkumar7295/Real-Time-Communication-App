@@ -51,16 +51,26 @@ MeetApp enforces a mandatory two-step authentication flow before issuing a JWT:
    - **Logging & Dev Mode:** OTPs are never logged in production. In the `dev` profile only, the generated OTP is logged via SLF4J to enable local testing without external email delivery.
 3. **JWT Issuance:** Only after successful OTP verification is a signed JWT returned. Signed with HMAC-SHA256 (`HS256`, 256-bit secret), valid for 24 hours.
 
-### 4.1 JWT Invalidation After Password Change & Account Deletion
-Because MeetApp uses stateless HMAC-SHA256 JWTs, tokens issued prior to a credential change remain cryptographically valid until their 24-hour natural expiration unless explicitly verified against a revocation anchor.
+### 4.1 JWT Invalidation via Token Versioning (V12)
+MeetApp enforces instantaneous token revocation across devices using an integer token version counter (`token_version`):
 
-**Architectural Options for Token Invalidation:**
-- **Option 1 (Accept Stateless 24h Expiry):** Accept standard stateless token expiration. Tokens expire naturally within 24 hours. Zero database queries during `JwtAuthFilter` execution, preserving high-performance stateless verification.
-- **Option 2 (Database Timestamp Revocation — Recommended):**
-  - Add a `password_changed_at TIMESTAMPTZ` column to the `users` table via Flyway migration `V10__add_password_changed_at.sql`.
-  - When a password is changed (`POST /api/users/me/change-password`), update `password_changed_at = now()`.
-  - In `JwtAuthFilter`, verify that the token's `iat` (issued-at) claim is strictly after `password_changed_at`. Tokens issued prior to the password change are instantly rejected with `401 Unauthorized`.
-  - *Recommendation:* Option 2 provides enterprise-grade session termination across all devices when credentials change. Requires user approval prior to generating migration `V10`.
+**Architecture & Rules:**
+- **Schema Anchor:** Flyway migration `V12__add_token_version.sql` adds `users.token_version INT NOT NULL DEFAULT 0`.
+- **Note on Existing Rows:** When migration `V12` is applied, all existing users receive `token_version = 0`. Tokens issued prior to migration lacks the `"ver"` claim and will end once, requiring a clean sign-in.
+- **JWT Claim:** Every issued JWT contains a numeric claim `"ver"` set to the user's current `token_version`.
+- **Validation Rule:** On every protected request, `JwtAuthFilter` checks:
+  1. The user exists in the database (deleted accounts are rejected immediately with `401 Unauthorized`).
+  2. The token contains a valid numeric `"ver"` claim. Missing or non-numeric `"ver"` claims are rejected with `401 Unauthorized`.
+  3. The token's `"ver"` equals the user's current `token_version`. If mismatched, authentication is rejected with `401 Unauthorized`.
+- **Password Change Invalidation:**
+  - Upon successful `POST /api/users/me/change-password`, the server atomically increments `token_version = token_version + 1` in the database.
+  - The server generates and returns a **NEW JWT** stamped with the incremented `ver` to the current device, keeping the active user signed in.
+  - All existing tokens on other devices/browsers retain the old version number and are immediately rejected.
+- **WebSocket Session Eviction & Ticket Invalidation:**
+  - On password change (and account deletion), all active WebSocket connections for `userId` are immediately terminated using close code `4001 ("Unauthorized - Password changed")`.
+  - All unconsumed WebSocket tickets for that user in `WsTicketService` are purged.
+  - Note: Any active meeting room tab on the same account will be disconnected with close code `4001`; the frontend displays a clear "Password changed - Please rejoin" message rather than reconnecting indefinitely.
+- **Ticket-Only WebSocket Handshake:** The WebSocket handshake accepts authentication exclusively via one-time tickets (`?ticket=...`). Direct token query parameters (`?token=...`) are rejected to prevent credential leakage in proxy/server access logs.
 
 ## 5. Authorization Matrix
 | Resource / Action | Anonymous | Authenticated User | Room Participant | Room Host |

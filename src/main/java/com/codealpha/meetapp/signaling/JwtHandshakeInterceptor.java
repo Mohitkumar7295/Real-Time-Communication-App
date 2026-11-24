@@ -73,40 +73,39 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         // 2. Query String Extraction
         var queryParams = UriComponentsBuilder.fromUri(request.getURI()).build().getQueryParams();
         String ticket = queryParams.getFirst("ticket");
-        String token = queryParams.getFirst("token");
-        String roomCode = queryParams.getFirst("room");
+        String roomCode = queryParams.getFirst("code");
+        if (roomCode == null) {
+            roomCode = queryParams.getFirst("room");
+        }
         if (roomCode == null) {
             roomCode = queryParams.getFirst("roomCode");
         }
 
-        if ((ticket == null || ticket.isBlank()) && (token == null || token.isBlank())) {
-            log.warn("WebSocket handshake rejected: Missing ticket or token parameter");
+        // Strictly reject direct JWT token parameters in query string to prevent credential exposure in access logs
+        if (queryParams.getFirst("token") != null) {
+            log.warn("WebSocket handshake rejected: Direct JWT tokens in query string are prohibited; ephemeral tickets required.");
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
+        }
+
+        if (ticket == null || ticket.isBlank()) {
+            log.warn("WebSocket handshake rejected: Missing ticket parameter");
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
 
         if (roomCode == null || roomCode.isBlank()) {
-            log.warn("WebSocket handshake rejected: Missing room parameter");
+            log.warn("WebSocket handshake rejected: Missing room code parameter");
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
 
-        // 3. Ticket / JWT Authentication & User Lookup
-        Optional<Long> userIdOpt;
-        if (ticket != null && !ticket.isBlank()) {
-            userIdOpt = wsTicketService.consumeTicket(ticket.trim());
-            if (userIdOpt.isEmpty()) {
-                log.warn("WebSocket handshake rejected: Invalid, expired, or already-consumed ticket");
-                response.setStatusCode(HttpStatus.UNAUTHORIZED);
-                return false;
-            }
-        } else {
-            userIdOpt = jwtService.extractUserId(token.trim());
-            if (userIdOpt.isEmpty()) {
-                log.warn("WebSocket handshake rejected: Invalid or expired JWT");
-                response.setStatusCode(HttpStatus.UNAUTHORIZED);
-                return false;
-            }
+        // 3. Ticket Authentication & User Lookup
+        Optional<Long> userIdOpt = wsTicketService.consumeTicket(ticket.trim());
+        if (userIdOpt.isEmpty()) {
+            log.warn("WebSocket handshake rejected: Invalid, expired, or already-consumed ticket");
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
+            return false;
         }
 
         Long userId = userIdOpt.get();

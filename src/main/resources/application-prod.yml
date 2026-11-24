@@ -6,6 +6,8 @@ logging:
     com.codealpha.meetapp: INFO
 
 server:
+  forward-headers-strategy: framework
+  shutdown: graceful
   error:
     include-stacktrace: never
     include-message: never

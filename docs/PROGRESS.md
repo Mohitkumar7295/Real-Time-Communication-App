@@ -1,10 +1,49 @@
 # MeetApp — Progress Tracking (PROGRESS.md)
 
 ## Session Summary
-- **Current Phase:** Phase 2 Complete (Items 1, 2, 3, 4 All Complete) &rarr; Ready for Phase 3: Optional Items
-- **Last Updated:** 2026-11-12
-- **Test Suite Status:** 193 tests across 28 test classes (100% passing)
-- **Environment Status:** `.env` verified 100% complete and matched against `.env.example`; untracked in Git; live Supabase PostgreSQL connection and Flyway migrations tested and healthy.
+- **Current Phase:** Full Security Hardening, Deployment Preparation & Release Documentation Complete (Stop Point 2 Ready)
+- **Last Updated:** 2026-11-14
+- **Test Suite Status:** 205 tests across 30 test classes (100% passing, 0 failures, 0 errors)
+- **Environment Status:** `.env` verified and untracked; `.dockerignore`, `Dockerfile`, `docker-compose.yml`, and `render.yaml` created; zero secrets in Git history.
+
+---
+
+## Progress Log
+
+### Hardening & Production Release Pass (2026-11-14)
+1. **Room Code Alphabet & Legacy Acceptance:**
+   - Removed `L` from `RoomCodeGenerator.java` (`ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"`).
+   - Created `RoomCodeGeneratorTest.java` (1,000 iterations verifying 8 chars, no ambiguous `0, 1, I, O, L`).
+   - Added `RoomServiceTest` verifying legacy room codes containing `L` (e.g. `k7l2qx9p`) are accepted case-insensitively and trimmed.
+   - Replaced all user-facing `DEMO1001` occurrences with `K7M2QX9P`.
+2. **TURN Multi-URL Exact Preservation:**
+   - Removed transport expansion from `IceConfigController.java`. Preserves exact trimmed URLs in configured order, deduplicated, in a single `iceServers` entry.
+   - Updated `IceConfigControllerTest.java` (8 passing unit tests) and `docs/API.md`.
+3. **SEC-04 (Elimination of `?token=` WebSocket Path):**
+   - Removed query-string `?token=` fallback from `JwtHandshakeInterceptor.java`. Handshake strictly requires ephemeral single-use 30s `?ticket=`.
+   - Updated `JwtHandshakeInterceptorTest.java` (7 passing tests) and `ScreenShareHandlerTest.java`.
+4. **SEC-08 (Query Parameter Uniformity):**
+   - Standardized `dashboard.js` and `socket.js` to strictly use `?code=`.
+5. **SEC-05 (Production Startup Guard):**
+   - Implemented `ProductionStartupGuard.java` under `@Profile("prod")`: validates `EMAIL_PROVIDER != "log"`, valid `RESEND_API_KEY`, `MAIL_FROM`, `JWT_SECRET` $\ge 32$ chars, `OTP_PEPPER` $\ge 32$ chars, `AES_KEY` Base64 decodes to 32 bytes, `APP_ALLOWED_ORIGIN` not localhost, `DB_URL` contains `sslmode=require`. Error messages never print secrets. Cannot be disabled via environment variable.
+   - Added `ProductionStartupGuardTest.java` (8 passing unit tests).
+6. **SEC-03 (Reverse Proxy & Forwarded Headers):**
+   - Configured `server.forward-headers-strategy: framework` and `server.shutdown: graceful` in `application-prod.yml`.
+7. **SEC-01 & SEC-02 (Zero Inline Styles & Strict CSP):**
+   - Refactored all inline `style="..."` attributes and inline handlers (`onclick`, `onsubmit`) across `dashboard.html`, `room.html`, `index.html`, `login.html`, `signup.html`, and `prejoin.html` to semantic CSS classes.
+   - Created `css/prejoin.css` to eliminate inline `<style>` tags.
+   - Configured strict CSP in `SecurityConfig.java`: `default-src 'self'`, `script-src 'self'`, `style-src 'self'` (no unsafe-inline), `img-src 'self' data: blob:`, `media-src 'self' blob:`, `connect-src 'self' <ws/wss-origin>`, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, and `Permissions-Policy: camera=(self), microphone=(self), display-capture=(self)`.
+   - Wired focus restoration in `dashboard.js` and modal buttons.
+8. **SEC-06 & SEC-09 (Terminal Close Codes & Resource Cleanup):**
+   - Handled close codes `4000`, `4001`, `4003`, `4009`, `4010`, `1008`, `1009` and ticket 401/403 errors in `socket.js` without reconnect.
+   - Added modal and redirect handling in `room.js`.
+   - Implemented `onTrackEnded` on `MediaManager` in `room.js` to toggle UI and send `mute-status`.
+   - Cleaned up event listeners (`keydown`, `visibilitychange`, `pagehide`, `beforeunload`, `popstate`) and exited fullscreen in `teardown()`.
+9. **Deployment & Final Docs:**
+   - Created multi-stage `Dockerfile` (Eclipse Temurin 17 JRE Alpine base, dynamic `$PORT` binding, non-root user `meetapp`).
+   - Created `.dockerignore`, `docker-compose.yml`, and `render.yaml`.
+   - Updated `docs/DEPLOYMENT.md`, `docs/TESTING.md`, and `docs/DEMO.md`.
+   - Full test suite: **205 tests run, 0 failures, 0 errors (100% passing)**.
 
 ---
 

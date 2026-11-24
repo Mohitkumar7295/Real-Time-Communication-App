@@ -144,6 +144,16 @@
   gap: var(--space-6);
 }
 
+.otp-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.otp-legend {
+  margin-bottom: 8px;
+}
+
 .otp-inputs {
   display: flex;
   justify-content: space-between;

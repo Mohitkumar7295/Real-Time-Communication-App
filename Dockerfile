@@ -9,11 +9,8 @@ FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /build
 
-# Cache Maven dependencies layer
+# Copy pom.xml and source code to build production artifact
 COPY pom.xml ./
-RUN mvn dependency:go-offline -B
-
-# Copy application source and build production artifact
 COPY src ./src
 RUN mvn clean package -DskipTests -B
 

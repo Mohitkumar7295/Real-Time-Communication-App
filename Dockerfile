@@ -9,10 +9,11 @@ FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /build
 
-# Copy pom.xml and source code to build production artifact
+# Copy settings, pom.xml, and source code to build production artifact
+COPY maven-settings.xml ./
 COPY pom.xml ./
 COPY src ./src
-RUN mvn clean package -DskipTests -B
+RUN mvn -s maven-settings.xml clean package -DskipTests -B
 
 # ------------------------------------------------------------------------------
 # Stage 2: Runtime

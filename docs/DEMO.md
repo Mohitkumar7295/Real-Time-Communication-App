@@ -84,8 +84,8 @@ Developed as part of my internship at @CodeAlpha (Task 4: Real-Time Communicatio
 
 A big thank you to @CodeAlpha for this challenging project!
 
-🔗 GitHub: [PLACEHOLDER: GitHub Repo Link]
-🌐 Live Demo: [PLACEHOLDER: Live Demo Link]
+🔗 GitHub: https://github.com/Mohitkumar7295/Real-Time-Communication-App
+🌐 Live Demo: https://meetapp-z0tm.onrender.com
 📺 Walkthrough: [PLACEHOLDER: Video Link]
 
 #Java #SpringBoot #WebRTC #FullStack #CodeAlpha #Internship #WebDevelopment #SoftwareEngineering
@@ -94,19 +94,19 @@ A big thank you to @CodeAlpha for this challenging project!
 ---
 
 ## 8. GitHub Repository Presentation Checklist
-- [ ] Concise repository description and topics tagged (`webrtc`, `spring-boot`, `java-17`, `realtime`).
-- [ ] Professional `README.md` with architecture diagrams and feature previews.
-- [ ] Working live demo link and video walkthrough link pinned at the top.
-- [ ] Clean commit history using Conventional Commit prefixes (`feat:`, `docs:`, `fix:`).
-- [ ] MIT License verified.
+- [x] Concise repository description and topics tagged (`webrtc`, `spring-boot`, `java-17`, `realtime`).
+- [x] Professional `README.md` with architecture diagrams and feature previews.
+- [x] Working live demo link pinned at the top (`https://meetapp-z0tm.onrender.com`).
+- [x] Clean commit history using Conventional Commit prefixes (`feat:`, `docs:`, `fix:`).
+- [x] MIT License verified.
 
 ---
 
 ## 9. Final Submission Checklist
-- [ ] GitHub Repository URL: [PLACEHOLDER: GitHub Repo Link]
-- [ ] Cloud Live Deployment: [PLACEHOLDER: Live App Link]
+- [x] GitHub Repository URL: https://github.com/Mohitkumar7295/Real-Time-Communication-App
+- [x] Cloud Live Deployment: https://meetapp-z0tm.onrender.com
 - [ ] Video Walkthrough URL: [PLACEHOLDER: Video Link]
-- [ ] Test Suite Execution: Confirmed 100% passing (`mvn clean test`).
+- [x] Test Suite Execution: Confirmed 100% passing (`mvn clean test`).
 - [ ] CodeAlpha Submission Form: [PLACEHOLDER: CodeAlpha Submission Requirements]
 
 ---

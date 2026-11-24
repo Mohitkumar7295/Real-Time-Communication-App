@@ -16,9 +16,9 @@
 | 3 Auth | 3 | 1 | 11 Board | 1 | 0 |
 | 4 Rooms | 1 | 0 | 12 Sec | 1 | 0 |
 | 5 Front | 1 | 0 | 13 UX | 1 | 0 |
-| 6 Signal | 1 | 0 | 14 Deploy | 1 | 0 |
+| 6 Signal | 1 | 0 | 14 Deploy | 1 | 1 |
 | 7 Video | 1 | 0 | 15 Submit | 1 | 0 |
-| **Tot** | **18** | **2** | | | |
+| **Tot** | **18** | **3** | | | |
 
 ## Dependencies & DoD
 - **Dependencies:** 1-2 need 0; 3 needs 1-2; 4 needs 3; 5 needs 3-4; 6 needs 4; 7 needs 4,6; 8-11 need 6-7; 12-15 need 0-11.
@@ -194,7 +194,7 @@
   - Steps: Build ended.html; add camera/mic error banners; handle room-full modal alerts.
   - Done when: UI functions seamlessly on desktop and mobile. Test: Deny camera permission; verify view-only entry.
 
-- [ ] **T-14.1 Deploy: Production Docker Packaging & Render Cloud Configuration** (NFR-2, NFR-4)
+- [x] **T-14.1 Deploy: Production Docker Packaging & Render Cloud Configuration** (NFR-2, NFR-4)
   - Files: `Dockerfile`, `.dockerignore`, `application-prod.yml`, `render.yaml`, `config.js`, `docs/DEPLOYMENT.md`, `README.md`
   - Steps:
     - Implement multi-stage `Dockerfile` with Eclipse Temurin JRE 17, non-root user, dynamic `$PORT` binding, and `-XX:MaxRAMPercentage=75.0`.

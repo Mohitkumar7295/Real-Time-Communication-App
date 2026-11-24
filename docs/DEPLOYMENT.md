@@ -68,7 +68,7 @@ All production configuration is supplied securely via Render environment variabl
 | `JWT_SECRET` | 256-bit signing key for authentication tokens | **Yes** | Yes | `[PLACEHOLDER: JWT_SECRET_256_BITS_MIN_32_CHARS]` |
 | `OTP_PEPPER` | 256-bit pepper for hashing login OTPs at rest | **Yes** | Yes | `[PLACEHOLDER: OTP_PEPPER_SECRET_32_CHARS]` |
 | `AES_KEY` | Base64-encoded 256-bit key for AES-GCM encryption | **Yes** | Yes | `[PLACEHOLDER: BASE64_AES_KEY_32_BYTES]` |
-| `APP_ALLOWED_ORIGIN` | Public HTTPS domain assigned by Render | No | Yes | `https://meetapp-xyz.onrender.com` |
+| `APP_ALLOWED_ORIGIN` | Public HTTPS domain assigned by Render | No | Yes | `https://meetapp-z0tm.onrender.com` |
 | `EMAIL_PROVIDER` | Email delivery provider (`resend` in production) | No | Yes | `resend` |
 | `RESEND_API_KEY` | API key for Resend transactional email API | **Yes** | Yes | `[PLACEHOLDER: re_dummy_resend_api_key]` |
 | `MAIL_FROM` | Verified sender email address for OTPs | No | Yes | `onboarding@resend.dev` (or verified custom domain) |
@@ -167,3 +167,24 @@ services:
       - key: TURN_CREDENTIAL
         sync: false
 ```
+
+---
+
+## 7. Live Production Service & Operational Notes
+
+### 7.1 Verified Production Endpoints
+- **Live Application:** [https://meetapp-z0tm.onrender.com](https://meetapp-z0tm.onrender.com)
+- **Health Probe:** [https://meetapp-z0tm.onrender.com/actuator/health](https://meetapp-z0tm.onrender.com/actuator/health) (returns `{"status":"UP"}`)
+- **Hosting Region:** Render Singapore (`singapore`)
+- **Container Base:** Eclipse Temurin 17 JRE Alpine, non-root user `meetapp` (UID 10001)
+
+### 7.2 Build Rate-Limit Mitigation (Google Maven Central Mirror)
+Render's shared builder IPs in Singapore can encounter HTTP 429 (`Too Many Requests`) from `repo.maven.apache.org`. To guarantee deterministic builds:
+- The project includes `maven-settings.xml` redirecting Central requests to Google Cloud's official Asia mirror:
+  `https://maven-central-asia.storage-download.googleapis.com/maven2`.
+- `Dockerfile` passes `-s maven-settings.xml` during the `mvn clean package` build stage.
+
+### 7.3 Supabase Database Connectivity Safeguards
+- **Username Specification:** When connecting via the Supabase Session Pooler (`*.pooler.supabase.com`), the `DB_USER` environment variable must be specified as `postgres.<project-ref>`, not plain `postgres`.
+- **Circuit Breaker (`ECIRCUITBREAKER`):** If incorrect credentials or a truncated password (e.g. unquoted trailing `#` stripped by `.env` parsers) trigger repeated failed logins, Supavisor locks new connections. Reset the breaker immediately by restarting the Supabase project in **Project Settings &rarr; General**.
+

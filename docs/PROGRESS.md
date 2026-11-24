@@ -1,14 +1,29 @@
 # MeetApp — Progress Tracking (PROGRESS.md)
 
 ## Session Summary
-- **Current Phase:** Full Security Hardening, Deployment Preparation & Release Documentation Complete (Stop Point 2 Ready)
-- **Last Updated:** 2026-11-14
+- **Current Phase:** Production Deployment & Live Verification Complete (Phase 14 Done)
+- **Last Updated:** 2026-11-24
+- **Live Production URL:** https://meetapp-z0tm.onrender.com (Health probe: https://meetapp-z0tm.onrender.com/actuator/health)
 - **Test Suite Status:** 205 tests across 30 test classes (100% passing, 0 failures, 0 errors)
-- **Environment Status:** `.env` verified and untracked; `.dockerignore`, `Dockerfile`, `docker-compose.yml`, and `render.yaml` created; zero secrets in Git history.
+- **Environment Status:** Single-origin Docker deployment live on Render Singapore; managed Supabase PostgreSQL connection over SSL; zero secrets in Git history.
 
 ---
 
 ## Progress Log
+
+### Phase 14: Production Deployment & Live Verification (2026-11-24)
+1. **Render Cloud Deployment Verification:**
+   - Multi-stage Docker packaging (`maven:3.9.6-eclipse-temurin-17-alpine` builder & `eclipse-temurin:17-jre-alpine` runner) deployed to Render Singapore.
+   - Non-root user `meetapp` (UID 10001), dynamic `$PORT` binding, and `-XX:MaxRAMPercentage=75.0`.
+2. **Build Rate-Limiting Resolution:**
+   - Mitigated Maven Central HTTP 429 rate-limiting on Render builder IPs by introducing `maven-settings.xml` pointing to Google Cloud Storage Asia mirror (`https://maven-central-asia.storage-download.googleapis.com/maven2`).
+3. **Database & Connection Pooling Hardening:**
+   - Verified Supabase Session Pooler connectivity with `DB_USER=postgres.<project-ref>` and `sslmode=require`.
+   - Documented Supavisor `ECIRCUITBREAKER` lockout mitigation and password parsing rules (avoiding comment-stripping on trailing `#`).
+4. **Live Verification:**
+   - Live URL confirmed: `https://meetapp-z0tm.onrender.com`.
+   - Non-blocking liveness probe verified: `GET /actuator/health` returns `{"status":"UP"}`.
+   - Task `T-14.1` checked off in `docs/TASKS.md`.
 
 ### Hardening & Production Release Pass (2026-11-14)
 1. **Room Code Alphabet & Legacy Acceptance:**

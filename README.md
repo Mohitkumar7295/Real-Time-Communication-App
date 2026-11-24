@@ -8,7 +8,8 @@
 
 MeetApp is a lightweight, browser-native video conferencing platform featuring WebRTC mesh calling, screen sharing, canvas whiteboard sync, file sharing, and chat.
 
-**Live Demo:** [PLACEHOLDER: Live Demo URL]  
+**Live Demo:** [https://meetapp-z0tm.onrender.com](https://meetapp-z0tm.onrender.com)  
+**Health Check:** [https://meetapp-z0tm.onrender.com/actuator/health](https://meetapp-z0tm.onrender.com/actuator/health)  
 **Video Walkthrough:** [PLACEHOLDER: Demo Video URL]
 
 ---
@@ -169,6 +170,6 @@ Details: [docs/SECURITY.md](docs/SECURITY.md).
 ## License & Author
 Distributed under the MIT License. Developed for CodeAlpha Task 4 (Real-Time Communication App).
 
-**Author:** [PLACEHOLDER: Author Name]  
-**GitHub:** [PLACEHOLDER: GitHub Profile URL]  
+**Author:** Mohit Kumar  
+**GitHub:** [https://github.com/Mohitkumar7295/Real-Time-Communication-App](https://github.com/Mohitkumar7295/Real-Time-Communication-App)  
 **LinkedIn:** [PLACEHOLDER: LinkedIn Profile URL]
